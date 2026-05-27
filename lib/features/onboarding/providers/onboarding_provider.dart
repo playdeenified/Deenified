@@ -12,6 +12,8 @@ class OnboardingState {
   final String? learningStyle;
   final String? practiceTime;
   final String? commitmentLevel;
+  final String? referralSource;
+  final String? referralInfluencer;
   final bool isComplete;
 
   const OnboardingState({
@@ -23,6 +25,8 @@ class OnboardingState {
     this.learningStyle,
     this.practiceTime,
     this.commitmentLevel,
+    this.referralSource,
+    this.referralInfluencer,
     this.isComplete = false,
   });
 
@@ -35,6 +39,8 @@ class OnboardingState {
     String? learningStyle,
     String? practiceTime,
     String? commitmentLevel,
+    String? referralSource,
+    String? referralInfluencer,
     bool? isComplete,
   }) {
     return OnboardingState(
@@ -47,13 +53,15 @@ class OnboardingState {
       learningStyle: learningStyle ?? this.learningStyle,
       practiceTime: practiceTime ?? this.practiceTime,
       commitmentLevel: commitmentLevel ?? this.commitmentLevel,
+      referralSource: referralSource ?? this.referralSource,
+      referralInfluencer: referralInfluencer ?? this.referralInfluencer,
       isComplete: isComplete ?? this.isComplete,
     );
   }
 }
 
 /// Total number of onboarding screens
-const int totalOnboardingSteps = 20;
+const int totalOnboardingSteps = 22;
 
 /// Onboarding provider to manage onboarding flow state
 @riverpod
@@ -123,6 +131,16 @@ class Onboarding extends _$Onboarding {
   /// Set commitment level
   void setCommitmentLevel(String level) {
     state = state.copyWith(commitmentLevel: level);
+  }
+
+  /// Set referral source (where they heard about us)
+  void setReferralSource(String source) {
+    state = state.copyWith(referralSource: source);
+  }
+
+  /// Set referral influencer name (free text)
+  void setReferralInfluencer(String name) {
+    state = state.copyWith(referralInfluencer: name);
   }
 
   /// Complete onboarding

@@ -69,6 +69,10 @@ class _SignupFormScreenState extends ConsumerState<SignupFormScreen> {
             'practice_time': onboardingState.practiceTime,
           if (onboardingState.commitmentLevel != null)
             'commitment_level': onboardingState.commitmentLevel,
+          if (onboardingState.referralSource != null)
+            'referral_source': onboardingState.referralSource,
+          if (onboardingState.referralInfluencer != null)
+            'referral_influencer': onboardingState.referralInfluencer,
         },
       );
 
