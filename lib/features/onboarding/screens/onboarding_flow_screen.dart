@@ -22,6 +22,8 @@ import 'diagnosis_screen.dart';
 import 'media_reveal_screen.dart';
 import 'mastery_reveal_screen.dart';
 import 'commitment_screen.dart';
+import 'referral_source_screen.dart';
+import 'referral_influencer_screen.dart';
 import 'features_screen.dart';
 import 'benefits_screen.dart';
 import 'social_proof_screen.dart';
@@ -81,7 +83,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     });
 
     // Screens where we hide the progress bar (paywall + signup form)
-    final hideProgressBar = onboardingState.currentStep >= 18;
+    final hideProgressBar = onboardingState.currentStep >= 20;
 
     return Scaffold(
       backgroundColor: AppColors.richBlack,
@@ -151,16 +153,18 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                   MediaRevealScreen(), // 11 — Video player
                   MasteryRevealScreen(), // 12
                   CommitmentScreen(), // 13
+                  ReferralSourceScreen(), // 14
+                  ReferralInfluencerScreen(), // 15
 
                   // Phase 5: Commitment
-                  FeaturesScreen(), // 14
-                  BenefitsScreen(), // 15
-                  SocialProofScreen(), // 16 — Redesigned
+                  FeaturesScreen(), // 16
+                  BenefitsScreen(), // 17
+                  SocialProofScreen(), // 18 — Redesigned
 
                   // Phase 6: Close/Paywall
-                  ValueStackScreen(), // 17
-                  PaywallScreen(), // 18 — RevenueCat
-                  SignupFormScreen(), // 19 — Account creation
+                  ValueStackScreen(), // 19
+                  PaywallScreen(), // 20 — RevenueCat
+                  SignupFormScreen(), // 21 — Account creation
                 ],
               ),
             ),
