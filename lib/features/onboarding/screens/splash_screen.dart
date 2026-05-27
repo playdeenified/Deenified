@@ -131,7 +131,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Master the Quran',
+                'Islamic trivia',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppColors.textSecondary,
                     ),

@@ -91,6 +91,8 @@ class _SignupFormScreenState extends ConsumerState<SignupFormScreen> {
             'relationship_with_allah': onboardingState.relationshipWithAllah,
           if (onboardingState.learningStyle != null)
             'learning_style': onboardingState.learningStyle,
+          if (onboardingState.practiceTime != null)
+            'practice_time': onboardingState.practiceTime,
           if (onboardingState.commitmentLevel != null)
             'commitment_level': onboardingState.commitmentLevel,
         },

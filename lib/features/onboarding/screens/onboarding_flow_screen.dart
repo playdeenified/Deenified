@@ -16,6 +16,7 @@ import 'validation_screen.dart';
 import 'friction_screen.dart';
 import 'relationship_screen.dart';
 import 'learning_style_screen.dart';
+import 'practice_time_screen.dart';
 import 'loading_screen.dart';
 import 'diagnosis_screen.dart';
 import 'media_reveal_screen.dart';
@@ -80,7 +81,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     });
 
     // Screens where we hide the progress bar (paywall + signup form)
-    final hideProgressBar = onboardingState.currentStep >= 17;
+    final hideProgressBar = onboardingState.currentStep >= 18;
 
     return Scaffold(
       backgroundColor: AppColors.richBlack,
@@ -140,25 +141,26 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                   FrictionScreen(), // 5
                   RelationshipScreen(), // 6
                   LearningStyleScreen(), // 7
+                  PracticeTimeScreen(), // 8
 
                   // Phase 3: Diagnosis
-                  LoadingScreen(), // 8
-                  DiagnosisScreen(), // 9
+                  LoadingScreen(), // 9
+                  DiagnosisScreen(), // 10
 
                   // Phase 4: Solution Loop
-                  MediaRevealScreen(), // 10 — Video player
-                  MasteryRevealScreen(), // 11
-                  CommitmentScreen(), // 12
+                  MediaRevealScreen(), // 11 — Video player
+                  MasteryRevealScreen(), // 12
+                  CommitmentScreen(), // 13
 
                   // Phase 5: Commitment
-                  FeaturesScreen(), // 13
-                  BenefitsScreen(), // 14
-                  SocialProofScreen(), // 15 — Redesigned
+                  FeaturesScreen(), // 14
+                  BenefitsScreen(), // 15
+                  SocialProofScreen(), // 16 — Redesigned
 
                   // Phase 6: Close/Paywall
-                  ValueStackScreen(), // 16
-                  PaywallScreen(), // 17 — RevenueCat
-                  SignupFormScreen(), // 18 — Account creation
+                  ValueStackScreen(), // 17
+                  PaywallScreen(), // 18 — RevenueCat
+                  SignupFormScreen(), // 19 — Account creation
                 ],
               ),
             ),

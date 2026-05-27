@@ -5,8 +5,8 @@ import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../providers/onboarding_provider.dart';
 
-class LearningStyleScreen extends ConsumerWidget {
-  const LearningStyleScreen({super.key});
+class PracticeTimeScreen extends ConsumerWidget {
+  const PracticeTimeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,7 +22,7 @@ class LearningStyleScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'How do you learn best?',
+                  'What time of day do you want to practice?',
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -30,37 +30,46 @@ class LearningStyleScreen extends ConsumerWidget {
                 _buildOption(
                   context,
                   ref,
-                  label: 'Visual',
-                  subLabel: 'Quizzes, text, and images',
-                  icon: Icons.visibility,
-                  value: 'visual',
-                  isSelected: state.learningStyle == 'visual',
+                  label: 'Morning',
+                  subLabel: 'Start the day with Fajr energy',
+                  icon: Icons.wb_sunny,
+                  value: 'morning',
+                  isSelected: state.practiceTime == 'morning',
                 ),
                 _buildOption(
                   context,
                   ref,
-                  label: 'Auditory',
-                  subLabel: 'Listening to stories & recitations',
-                  icon: Icons.headphones,
-                  value: 'auditory',
-                  isSelected: state.learningStyle == 'auditory',
+                  label: 'Afternoon',
+                  subLabel: 'A midday spiritual reset',
+                  icon: Icons.light_mode,
+                  value: 'afternoon',
+                  isSelected: state.practiceTime == 'afternoon',
                 ),
                 _buildOption(
                   context,
                   ref,
-                  label: 'Both',
-                  subLabel: 'I like a mix of everything',
-                  icon: Icons.auto_awesome,
-                  value: 'both',
-                  isSelected: state.learningStyle == 'both',
+                  label: 'Evening',
+                  subLabel: 'Wind down with the Qur\'an',
+                  icon: Icons.wb_twilight,
+                  value: 'evening',
+                  isSelected: state.practiceTime == 'evening',
+                ),
+                _buildOption(
+                  context,
+                  ref,
+                  label: 'Late Night',
+                  subLabel: 'Quiet hours of reflection',
+                  icon: Icons.bedtime,
+                  value: 'late_night',
+                  isSelected: state.practiceTime == 'late_night',
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 PremiumButton(
-                  text: 'CONTINUE',
-                  onPressed: state.learningStyle != null
+                  text: 'BUILD MY PLAN',
+                  onPressed: state.practiceTime != null
                       ? () => ref.read(onboardingProvider.notifier).nextStep()
                       : () {},
-                  isOutlined: state.learningStyle == null,
+                  isOutlined: state.practiceTime == null,
                 ),
                 const SizedBox(height: AppSpacing.lg),
               ],
@@ -83,7 +92,7 @@ class LearningStyleScreen extends ConsumerWidget {
     return ContentCard(
       selected: isSelected,
       onTap: () =>
-          ref.read(onboardingProvider.notifier).setLearningStyle(value),
+          ref.read(onboardingProvider.notifier).setPracticeTime(value),
       child: Row(
         children: [
           Container(

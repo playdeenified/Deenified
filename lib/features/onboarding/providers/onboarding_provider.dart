@@ -10,6 +10,7 @@ class OnboardingState {
   final List<String> barriers;
   final String? relationshipWithAllah;
   final String? learningStyle;
+  final String? practiceTime;
   final String? commitmentLevel;
   final bool isComplete;
 
@@ -20,6 +21,7 @@ class OnboardingState {
     this.barriers = const [],
     this.relationshipWithAllah,
     this.learningStyle,
+    this.practiceTime,
     this.commitmentLevel,
     this.isComplete = false,
   });
@@ -31,6 +33,7 @@ class OnboardingState {
     List<String>? barriers,
     String? relationshipWithAllah,
     String? learningStyle,
+    String? practiceTime,
     String? commitmentLevel,
     bool? isComplete,
   }) {
@@ -42,6 +45,7 @@ class OnboardingState {
       relationshipWithAllah:
           relationshipWithAllah ?? this.relationshipWithAllah,
       learningStyle: learningStyle ?? this.learningStyle,
+      practiceTime: practiceTime ?? this.practiceTime,
       commitmentLevel: commitmentLevel ?? this.commitmentLevel,
       isComplete: isComplete ?? this.isComplete,
     );
@@ -49,7 +53,7 @@ class OnboardingState {
 }
 
 /// Total number of onboarding screens
-const int totalOnboardingSteps = 19;
+const int totalOnboardingSteps = 20;
 
 /// Onboarding provider to manage onboarding flow state
 @riverpod
@@ -109,6 +113,11 @@ class Onboarding extends _$Onboarding {
   /// Set learning style
   void setLearningStyle(String style) {
     state = state.copyWith(learningStyle: style);
+  }
+
+  /// Set preferred time of day for practice
+  void setPracticeTime(String time) {
+    state = state.copyWith(practiceTime: time);
   }
 
   /// Set commitment level
