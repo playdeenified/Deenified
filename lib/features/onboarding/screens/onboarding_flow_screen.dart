@@ -70,8 +70,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       if (previous?.currentStep != next.currentStep) {
         _pageController.animateToPage(
           next.currentStep,
-          duration: AppDurations.normal,
-          curve: Curves.easeInOut,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOutCubic,
         );
       }
 

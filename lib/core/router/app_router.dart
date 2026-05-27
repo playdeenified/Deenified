@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/onboarding/screens/splash_screen.dart';
@@ -34,32 +35,50 @@ class AppRoutes {
   static const renew = '/renew';
 }
 
+/// Smooth fade transition for all top-level navigation.
+CustomTransitionPage<T> _fadePage<T>(GoRouterState state, Widget child) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 280),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        ),
+        child: child,
+      );
+    },
+  );
+}
+
 /// Main app router configuration
 final appRouter = GoRouter(
   initialLocation: AppRoutes.splash,
   routes: [
-    // Splash Screen
     GoRoute(
       path: AppRoutes.splash,
-      builder: (context, state) => const SplashScreen(),
+      pageBuilder: (context, state) => _fadePage(state, const SplashScreen()),
     ),
 
-    // Login Screen
     GoRoute(
       path: AppRoutes.login,
-      builder: (context, state) => const LoginScreen(),
+      pageBuilder: (context, state) => _fadePage(state, const LoginScreen()),
     ),
 
-    // Onboarding Flow
     GoRoute(
       path: AppRoutes.onboarding,
-      builder: (context, state) => const OnboardingFlowScreen(),
+      pageBuilder: (context, state) =>
+          _fadePage(state, const OnboardingFlowScreen()),
     ),
 
-    // Renewal Paywall (for expired subscriptions)
     GoRoute(
       path: AppRoutes.renew,
-      builder: (context, state) => const RenewalPaywallScreen(),
+      pageBuilder: (context, state) =>
+          _fadePage(state, const RenewalPaywallScreen()),
     ),
 
     // Main Shell with Bottom Navigation
@@ -99,56 +118,52 @@ final appRouter = GoRouter(
       ],
     ),
 
-    // Surah Detail
     GoRoute(
       path: AppRoutes.surahDetail,
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final id = state.pathParameters['id']!;
-        return SurahDetailScreen(surahId: int.parse(id));
+        return _fadePage(state, SurahDetailScreen(surahId: int.parse(id)));
       },
     ),
     GoRoute(
       path: AppRoutes.quiz,
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final surahId = state.pathParameters['surahId']!;
-        return QuizScreen(surahId: int.parse(surahId));
+        return _fadePage(state, QuizScreen(surahId: int.parse(surahId)));
       },
     ),
 
-    // Surah Reader
     GoRoute(
       path: AppRoutes.surahReader,
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final id = state.pathParameters['id']!;
         final name = (state.extra as String?) ?? 'Surah';
-        return SurahReaderScreen(
-          surahId: int.parse(id),
-          surahName: name,
+        return _fadePage(
+          state,
+          SurahReaderScreen(surahId: int.parse(id), surahName: name),
         );
       },
     ),
 
-    // Audio Player
     GoRoute(
       path: AppRoutes.player,
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final id = state.pathParameters['id']!;
-        return AudioPlayerScreen(storyId: id);
+        return _fadePage(state, AudioPlayerScreen(storyId: id));
       },
     ),
 
-    // Daily Challenge
     GoRoute(
       path: AppRoutes.dailyChallenge,
-      builder: (context, state) => const QuizScreen(surahId: 0),
+      pageBuilder: (context, state) =>
+          _fadePage(state, const QuizScreen(surahId: 0)),
     ),
 
-    // Practice Quiz by category
     GoRoute(
       path: AppRoutes.practiceQuiz,
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final category = state.pathParameters['category']!;
-        return QuizScreen(surahId: 0, category: category);
+        return _fadePage(state, QuizScreen(surahId: 0, category: category));
       },
     ),
   ],
