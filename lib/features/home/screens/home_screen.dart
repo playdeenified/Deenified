@@ -261,7 +261,8 @@ class _ContinueReadingCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Foreground content
+            // Foreground content — right padding leaves room for the
+            // floating book button so text never runs under it.
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
@@ -295,31 +296,45 @@ class _ContinueReadingCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    surahName,
-                    style: GoogleFonts.outfit(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textOnHero,
-                      height: 1,
+                  Padding(
+                    padding: const EdgeInsets.only(right: 64),
+                    child: Text(
+                      surahName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textOnHero,
+                        height: 1,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    surahArabic,
-                    style: GoogleFonts.amiri(
-                      fontSize: 18,
-                      color: AppColors.textOnHeroMuted,
-                      height: 1.2,
+                  Padding(
+                    padding: const EdgeInsets.only(right: 64),
+                    child: Text(
+                      surahArabic,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.amiri(
+                        fontSize: 18,
+                        color: AppColors.textOnHeroMuted,
+                        height: 1.2,
+                      ),
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    'Tap to begin your journey through the Qur\'an',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: AppColors.textOnHeroMuted,
-                      height: 1.3,
+                  // Tagline stops short of the book button.
+                  Padding(
+                    padding: const EdgeInsets.only(right: 72),
+                    child: Text(
+                      'Tap to begin your journey through the Qur\'an',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: AppColors.textOnHeroMuted,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
