@@ -34,10 +34,31 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     return Scaffold(
       backgroundColor: AppColors.richBlack,
       appBar: AppBar(
-        title: Text(widget.surahName),
         centerTitle: true,
-        backgroundColor: AppColors.deepCharcoal,
+        backgroundColor: AppColors.richBlack,
+        surfaceTintColor: AppColors.richBlack,
         elevation: 0,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              widget.surahName,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              'Surah ${widget.surahId} · Reading',
+              style: const TextStyle(
+                color: AppColors.metallicGold,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
       body: FutureBuilder<List<QuranVerse>>(
         future: _versesFuture,

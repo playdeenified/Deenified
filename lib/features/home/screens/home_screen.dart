@@ -89,20 +89,34 @@ class _TopBar extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: const BoxDecoration(
-            color: AppColors.softGold,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            initials,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.heroBlack,
+        GestureDetector(
+          onTap: () => context.go(AppRoutes.profile),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.softGold, AppColors.metallicGold],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.metallicGold.withValues(alpha: 0.30),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initials,
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.heroBlack,
+              ),
             ),
           ),
         ),
@@ -491,9 +505,12 @@ class _VerseOfTheDayCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.creamSoft,
+        // Pale GOLD wash + gold border (not cream).
+        color: AppColors.metallicGold.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(
+          color: AppColors.metallicGold.withValues(alpha: 0.30),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,7 +522,7 @@ class _VerseOfTheDayCard extends StatelessWidget {
                 style: GoogleFonts.outfit(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.darkGold,
+                  color: AppColors.metallicGold,
                   letterSpacing: 1.6,
                 ),
               ),
@@ -593,14 +610,14 @@ class _SurahSectionHeader extends StatelessWidget {
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.darkGold,
+                  color: AppColors.metallicGold,
                 ),
               ),
               const SizedBox(width: 2),
               const Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: AppColors.darkGold,
+                color: AppColors.metallicGold,
               ),
             ],
           ),
@@ -795,7 +812,7 @@ class _SurahCard extends StatelessWidget {
                   arabic,
                   style: GoogleFonts.amiri(
                     fontSize: 22,
-                    color: AppColors.darkGold,
+                    color: AppColors.metallicGold,
                     height: 1.2,
                   ),
                 ),

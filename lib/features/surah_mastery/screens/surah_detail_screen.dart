@@ -38,7 +38,7 @@ class SurahDetailScreen extends ConsumerWidget {
           expandedHeight: 260,
           pinned: true,
           backgroundColor: AppColors.richBlack,
-          surfaceTintColor: AppColors.cream,
+          surfaceTintColor: AppColors.richBlack,
           elevation: 0,
           leading: Padding(
             padding: const EdgeInsets.all(AppSpacing.sm),

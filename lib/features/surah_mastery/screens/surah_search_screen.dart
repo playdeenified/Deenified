@@ -424,7 +424,7 @@ class _ResultCard extends StatelessWidget {
                   arabic,
                   style: GoogleFonts.amiri(
                     fontSize: 20,
-                    color: AppColors.darkGold,
+                    color: AppColors.metallicGold,
                   ),
                 ),
               ),

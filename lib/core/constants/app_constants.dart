@@ -15,13 +15,15 @@ class AppColors {
   static const softGold = Color(0xFFE8C66B);
   static const darkGold = Color(0xFFA67C00);
 
-  // True cream — used ONLY as accent on specific surfaces (badges, verse card)
-  static const cream = Color(0xFFF2E8D0);         // accent cream
-  static const creamSoft = Color(0xFFF8EEDA);     // verse-of-the-day card
-  static const heroBlack = Color(0xFF0A0A0A);     // hero / continue card
-  static const heroBlackSoft = Color(0xFF1A1A1A); // gradient end
-  static const mint = Color(0xFFC9E4D2);          // today badge bg
-  static const mintDeep = Color(0xFF4F8C66);      // today badge text
+  // "cream" kept for compatibility but repointed to white + pale gold —
+  // we no longer use a true cream anywhere in the app.
+  static const cream = Color(0xFFFFFFFF);           // = white
+  static const creamSoft = Color(0xFFFBF3DE);       // very faint gold wash
+  static const heroBlack = Color(0xFF0A0A0A);       // hero / continue card
+  static const heroBlackSoft = Color(0xFF1A1A1A);   // gradient end
+  // Secondary accent — gold (replaces the old mint/green).
+  static const mint = Color(0xFFFBF0CE);            // pale gold badge bg
+  static const mintDeep = Color(0xFFA67C00);        // deep gold badge text
 
   // Borders / dividers (dark on light)
   static const glassWhite = Color.fromRGBO(0, 0, 0, 0.03);

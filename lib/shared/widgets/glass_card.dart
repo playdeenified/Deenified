@@ -88,8 +88,9 @@ class ContentCard extends StatelessWidget {
         margin: margin ?? const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: padding ?? const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
+          // Selected = pale GOLD wash (never cream). Unselected = white.
           color: selected
-              ? AppColors.creamSoft
+              ? AppColors.metallicGold.withValues(alpha: 0.08)
               : AppColors.deepCharcoal,
           borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
@@ -101,7 +102,7 @@ class ContentCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: selected
-                  ? AppColors.metallicGold.withValues(alpha: 0.18)
+                  ? AppColors.metallicGold.withValues(alpha: 0.20)
                   : Colors.black.withValues(alpha: 0.04),
               blurRadius: selected ? 16 : 8,
               offset: const Offset(0, 4),
