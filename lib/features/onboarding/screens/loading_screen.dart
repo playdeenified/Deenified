@@ -21,12 +21,12 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
   bool _advanced = false;
 
   final List<String> _messages = [
+    'Building your plan...',
     'Analyzing your learning style...',
-    'Calibrating Surah mastery path...',
-    'Selecting ideal starting point...',
+    'Selecting your starting Surahs...',
     'Curating audio stories...',
     'Personalizing your daily goals...',
-    'Finalizing your Deenified plan...',
+    'Almost ready...',
   ];
 
   @override
@@ -35,7 +35,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
 
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 5200),
+      duration: const Duration(milliseconds: 3000),
     )
       ..addListener(_handleTick)
       ..forward();

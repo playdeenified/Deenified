@@ -8,26 +8,20 @@ import '../../../core/router/app_router.dart';
 import '../providers/onboarding_provider.dart';
 
 // Screens
-import 'mission_screen.dart';
-import 'our_mission_screen.dart';
+import 'hero_screen.dart';
 import 'identity_screen.dart';
 import 'motivation_screen.dart';
-import 'validation_screen.dart';
-import 'friction_screen.dart';
 import 'relationship_screen.dart';
+import 'friction_screen.dart';
 import 'learning_style_screen.dart';
 import 'practice_time_screen.dart';
-import 'loading_screen.dart';
-import 'diagnosis_screen.dart';
-import 'media_reveal_screen.dart';
-import 'mastery_reveal_screen.dart';
 import 'commitment_screen.dart';
-import 'referral_source_screen.dart';
-import 'referral_influencer_screen.dart';
-import 'features_screen.dart';
-import 'benefits_screen.dart';
+import 'referral_screen.dart';
 import 'social_proof_screen.dart';
-import 'value_stack_screen.dart';
+import 'loading_screen.dart';
+import 'plan_complete_screen.dart';
+import 'ratings_screen.dart';
+import 'plan_reveal_screen.dart';
 import 'paywall_screen.dart';
 import 'signup_form_screen.dart';
 
@@ -83,7 +77,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     });
 
     // Screens where we hide the progress bar (paywall + signup form)
-    final hideProgressBar = onboardingState.currentStep >= 20;
+    final hideProgressBar = onboardingState.currentStep >= 14;
 
     return Scaffold(
       backgroundColor: AppColors.richBlack,
@@ -177,39 +171,29 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(), // Disable swipe
                 children: const [
-                  // Phase 1: Hook
-                  MissionScreen(), // 0 — Welcome
-                  OurMissionScreen(), // 1 — Our Mission (NEW)
+                  // Hook
+                  HeroScreen(), // 0 — merged Mission + Our Mission
 
-                  // Phase 2: Buy-In
-                  IdentityScreen(), // 2
-                  MotivationScreen(), // 3
-                  ValidationScreen(), // 4
-                  FrictionScreen(), // 5
-                  RelationshipScreen(), // 6
-                  LearningStyleScreen(), // 7
-                  PracticeTimeScreen(), // 8
+                  // Profile questions (all write to OnboardingState -> Supabase)
+                  IdentityScreen(), // 1  user_type
+                  MotivationScreen(), // 2  motivation
+                  RelationshipScreen(), // 3  relationship_with_allah
+                  FrictionScreen(), // 4  barriers[]
+                  LearningStyleScreen(), // 5  learning_style
+                  PracticeTimeScreen(), // 6  practice_time
+                  CommitmentScreen(), // 7  commitment_level
+                  ReferralScreen(), // 8  referral_source + referral_influencer
 
-                  // Phase 3: Diagnosis
-                  LoadingScreen(), // 9
-                  DiagnosisScreen(), // 10
+                  // Trust + plan build
+                  SocialProofScreen(), // 9  testimonials, 4.9
+                  LoadingScreen(), // 10  "Building your plan..."
+                  PlanCompleteScreen(), // 11  celebration
+                  RatingsScreen(), // 12  in-app rating
+                  PlanRevealScreen(), // 13  reflects their answers
 
-                  // Phase 4: Solution Loop
-                  MediaRevealScreen(), // 11 — Video player
-                  MasteryRevealScreen(), // 12
-                  CommitmentScreen(), // 13
-                  ReferralSourceScreen(), // 14
-                  ReferralInfluencerScreen(), // 15
-
-                  // Phase 5: Commitment
-                  FeaturesScreen(), // 16
-                  BenefitsScreen(), // 17
-                  SocialProofScreen(), // 18 — Redesigned
-
-                  // Phase 6: Close/Paywall
-                  ValueStackScreen(), // 19
-                  PaywallScreen(), // 20 — RevenueCat
-                  SignupFormScreen(), // 21 — Account creation
+                  // Close
+                  PaywallScreen(), // 14 — HARD paywall
+                  SignupFormScreen(), // 15 — Account creation
                 ],
                   ),
                 ),

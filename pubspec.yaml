@@ -42,7 +42,10 @@ dependencies:
   
   # URL Launching
   url_launcher: ^6.3.1
-  
+
+  # In-app App Store rating prompt
+  in_app_review: ^2.0.10
+
   # Utilities
   flutter_dotenv: ^5.2.1
   go_router: ^14.8.1

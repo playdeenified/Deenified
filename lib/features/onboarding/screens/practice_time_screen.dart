@@ -22,7 +22,7 @@ class PracticeTimeScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'What time of day do you want to practice?',
+                  'When do you want to practice?',
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),

@@ -23,7 +23,7 @@ class CommitmentScreen extends ConsumerWidget {
               children: [
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'How much time can you commit daily?',
+                  'How much time daily?',
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
