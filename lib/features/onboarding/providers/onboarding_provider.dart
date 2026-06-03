@@ -61,7 +61,7 @@ class OnboardingState {
 }
 
 /// Total number of onboarding screens
-const int totalOnboardingSteps = 16;
+const int totalOnboardingSteps = 17;
 
 /// Onboarding provider to manage onboarding flow state
 @riverpod

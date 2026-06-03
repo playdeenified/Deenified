@@ -5,10 +5,16 @@ import '../../../core/constants/app_constants.dart';
 import '../providers/onboarding_provider.dart';
 
 /// Smooth, continuous loading screen used between onboarding phases.
-/// Uses an AnimationController for buttery-smooth progress instead of a
-/// stepped Timer, plus a gentle breathing halo behind the spinner.
+///
+/// IMPORTANT: a PageView constructs this screen *before* the user reaches it,
+/// so the progress run + auto-advance must only fire once it's the ACTIVE
+/// step. [stepIndex] is this screen's position; we compare against
+/// currentStep and only start when they match (prevents the double-advance
+/// "skip to auth" glitch).
 class LoadingScreen extends ConsumerStatefulWidget {
-  const LoadingScreen({super.key});
+  const LoadingScreen({super.key, required this.stepIndex});
+
+  final int stepIndex;
 
   @override
   ConsumerState<LoadingScreen> createState() => _LoadingScreenState();
@@ -19,6 +25,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
   late final AnimationController _progressController;
   late final AnimationController _breatheController;
   bool _advanced = false;
+  bool _started = false;
 
   final List<String> _messages = [
     'Building your plan...',
@@ -33,12 +40,11 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
   void initState() {
     super.initState();
 
+    // Built but NOT started — _startIfActive() kicks it off when visible.
     _progressController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
-    )
-      ..addListener(_handleTick)
-      ..forward();
+    )..addListener(_handleTick);
 
     _breatheController = AnimationController(
       vsync: this,
@@ -46,12 +52,21 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
     )..repeat(reverse: true);
   }
 
+  void _startIfActive() {
+    if (_started) return;
+    if (ref.read(onboardingProvider).currentStep == widget.stepIndex) {
+      _started = true;
+      _progressController.forward();
+    }
+  }
+
   void _handleTick() {
     if (!_advanced && _progressController.value >= 1.0) {
       _advanced = true;
-      // Give the user a beat to read the final message, then advance.
+      // Advance only if we're still the active page.
       Future.delayed(const Duration(milliseconds: 350), () {
-        if (mounted) {
+        if (mounted &&
+            ref.read(onboardingProvider).currentStep == widget.stepIndex) {
           ref.read(onboardingProvider.notifier).nextStep();
         }
       });
@@ -74,6 +89,10 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Re-runs whenever currentStep changes; starts the run when we land here.
+    ref.watch(onboardingProvider.select((s) => s.currentStep));
+    _startIfActive();
+
     return AnimatedBuilder(
       animation: _progressController,
       builder: (context, _) {

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,11 +7,36 @@ import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../providers/onboarding_provider.dart';
 
-class ReferralSourceScreen extends ConsumerWidget {
+/// "Where did you hear about us?" — options are shuffled once per session so
+/// users don't just tap the top one, giving us honest attribution data.
+class ReferralSourceScreen extends ConsumerStatefulWidget {
   const ReferralSourceScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReferralSourceScreen> createState() =>
+      _ReferralSourceScreenState();
+}
+
+class _ReferralSourceScreenState extends ConsumerState<ReferralSourceScreen> {
+  // Shuffled once on first build, then stable for this user's session.
+  late final List<_SourceOption> _options;
+
+  @override
+  void initState() {
+    super.initState();
+    _options = List<_SourceOption>.from(_allOptions)..shuffle(Random());
+  }
+
+  static const _allOptions = [
+    _SourceOption('Instagram', Icons.camera_alt_outlined, 'instagram'),
+    _SourceOption('TikTok', Icons.music_note, 'tiktok'),
+    _SourceOption('Friends or Family', Icons.people_outline, 'friends_family'),
+    _SourceOption('YouTube', Icons.smart_display_outlined, 'youtube'),
+    _SourceOption('Other', Icons.more_horiz, 'other'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
 
     return LayoutBuilder(
@@ -25,42 +52,21 @@ class ReferralSourceScreen extends ConsumerWidget {
               children: [
                 Text(
                   'Where did you hear about us?',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                _buildOption(
-                  context,
-                  ref,
-                  label: 'Instagram',
-                  icon: Icons.camera_alt_outlined,
-                  value: 'instagram',
-                  isSelected: state.referralSource == 'instagram',
-                ),
-                _buildOption(
-                  context,
-                  ref,
-                  label: 'TikTok',
-                  icon: Icons.music_note,
-                  value: 'tiktok',
-                  isSelected: state.referralSource == 'tiktok',
-                ),
-                _buildOption(
-                  context,
-                  ref,
-                  label: 'Friends or Family',
-                  icon: Icons.people_outline,
-                  value: 'friends_family',
-                  isSelected: state.referralSource == 'friends_family',
-                ),
-                _buildOption(
-                  context,
-                  ref,
-                  label: 'Other',
-                  icon: Icons.more_horiz,
-                  value: 'other',
-                  isSelected: state.referralSource == 'other',
-                ),
+                for (final opt in _options)
+                  _buildOption(
+                    context,
+                    label: opt.label,
+                    icon: opt.icon,
+                    value: opt.value,
+                    isSelected: state.referralSource == opt.value,
+                  ),
                 const SizedBox(height: AppSpacing.xl),
                 PremiumButton(
                   text: 'CONTINUE',
@@ -79,8 +85,7 @@ class ReferralSourceScreen extends ConsumerWidget {
   }
 
   Widget _buildOption(
-    BuildContext context,
-    WidgetRef ref, {
+    BuildContext context, {
     required String label,
     required IconData icon,
     required String value,
@@ -95,16 +100,17 @@ class ReferralSourceScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.metallicGold.withValues(alpha: 0.1)
-                  : AppColors.deepCharcoal,
+              gradient: isSelected
+                  ? const LinearGradient(
+                      colors: [AppColors.softGold, AppColors.metallicGold],
+                    )
+                  : null,
+              color: isSelected ? null : AppColors.cream,
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              color: isSelected
-                  ? AppColors.metallicGold
-                  : AppColors.textSecondary,
+              color: isSelected ? AppColors.heroBlack : AppColors.darkGold,
               size: 24,
             ),
           ),
@@ -113,15 +119,22 @@ class ReferralSourceScreen extends ConsumerWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: isSelected
-                        ? AppColors.metallicGold
-                        : AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
           ),
+          if (isSelected)
+            const Icon(Icons.check_circle, color: AppColors.metallicGold),
         ],
       ),
     );
   }
+}
+
+class _SourceOption {
+  const _SourceOption(this.label, this.icon, this.value);
+  final String label;
+  final IconData icon;
+  final String value;
 }

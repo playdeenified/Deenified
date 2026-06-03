@@ -16,7 +16,8 @@ import 'friction_screen.dart';
 import 'learning_style_screen.dart';
 import 'practice_time_screen.dart';
 import 'commitment_screen.dart';
-import 'referral_screen.dart';
+import 'referral_source_screen.dart';
+import 'referral_influencer_screen.dart';
 import 'social_proof_screen.dart';
 import 'loading_screen.dart';
 import 'plan_complete_screen.dart';
@@ -77,7 +78,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     });
 
     // Screens where we hide the progress bar (paywall + signup form)
-    final hideProgressBar = onboardingState.currentStep >= 14;
+    final hideProgressBar = onboardingState.currentStep >= 15;
 
     return Scaffold(
       backgroundColor: AppColors.richBlack,
@@ -182,18 +183,19 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                   LearningStyleScreen(), // 5  learning_style
                   PracticeTimeScreen(), // 6  practice_time
                   CommitmentScreen(), // 7  commitment_level
-                  ReferralScreen(), // 8  referral_source + referral_influencer
+                  ReferralSourceScreen(), // 8  referral_source (randomized)
+                  ReferralInfluencerScreen(), // 9  referral_influencer
 
                   // Trust + plan build
-                  SocialProofScreen(), // 9  testimonials, 4.9
-                  LoadingScreen(), // 10  "Building your plan..."
-                  PlanCompleteScreen(), // 11  celebration
-                  RatingsScreen(), // 12  in-app rating
-                  PlanRevealScreen(), // 13  reflects their answers
+                  SocialProofScreen(), // 10  testimonials, 4.9
+                  LoadingScreen(stepIndex: 11), // 11  "Building your plan..."
+                  PlanCompleteScreen(), // 12  celebration
+                  RatingsScreen(), // 13  in-app rating
+                  PlanRevealScreen(), // 14  reflects their answers
 
                   // Close
-                  PaywallScreen(), // 14 — HARD paywall
-                  SignupFormScreen(), // 15 — Account creation
+                  PaywallScreen(), // 15 — HARD paywall
+                  SignupFormScreen(), // 16 — Account creation
                 ],
                   ),
                 ),

@@ -26,6 +26,11 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   bool _progressLoaded = false;
   String? _audioError;
 
+  // While the user is dragging the scrubber, we show THEIR value instead of
+  // the live position stream (which would otherwise fight the drag and snap
+  // the thumb back). Null = not dragging.
+  double? _dragValue;
+
   @override
   void initState() {
     super.initState();
@@ -206,43 +211,6 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                 color: AppColors.metallicGold,
                               ),
                             ),
-                          // Premium badge
-                          Positioned(
-                            top: 12,
-                            right: 12,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.metallicGold,
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.sm),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    size: 14,
-                                    color: AppColors.richBlack,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Premium',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(
-                                          color: AppColors.richBlack,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -330,14 +298,25 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                         enabledThumbRadius: 8),
                                   ),
                                   child: Slider(
-                                    value: progress.clamp(0.0, 1.0),
+                                    // Use the drag value while dragging so the
+                                    // thumb tracks the finger smoothly.
+                                    value: (_dragValue ?? progress)
+                                        .clamp(0.0, 1.0),
+                                    onChangeStart: (value) {
+                                      setState(() => _dragValue = value);
+                                    },
                                     onChanged: (value) {
-                                      final newPos = Duration(
-                                        milliseconds: (value *
-                                                totalDuration.inMilliseconds)
-                                            .toInt(),
-                                      );
-                                      _player.seek(newPos);
+                                      setState(() => _dragValue = value);
+                                    },
+                                    onChangeEnd: (value) {
+                                      HapticFeedback.selectionClick();
+                                      final ms = totalDuration.inMilliseconds;
+                                      if (ms > 0) {
+                                        _player.seek(Duration(
+                                          milliseconds: (value * ms).toInt(),
+                                        ));
+                                      }
+                                      setState(() => _dragValue = null);
                                     },
                                   ),
                                 ),
@@ -350,7 +329,16 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        _formatDuration(position),
+                                        _formatDuration(
+                                          _dragValue != null
+                                              ? Duration(
+                                                  milliseconds: (_dragValue! *
+                                                          totalDuration
+                                                              .inMilliseconds)
+                                                      .toInt(),
+                                                )
+                                              : position,
+                                        ),
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelSmall
