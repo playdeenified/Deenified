@@ -10,10 +10,11 @@ class AppColors {
   static const richBlack = Color(0xFFFFFFFF);    // app background (pure white)
   static const deepCharcoal = Color(0xFFFFFFFF); // card / surface (pure white)
 
-  // Bright yellow accent system (replaces the old muddy gold)
-  static const metallicGold = Color(0xFFFFC400); // bright yellow-gold
-  static const softGold = Color(0xFFFFE07A);     // light yellow
-  static const darkGold = Color(0xFFE5A600);     // deeper yellow (text on white)
+  // One consistent radiant gold. Use these three as a gradient family:
+  // softGold (top highlight) -> metallicGold (base) -> darkGold (depth/shadow).
+  static const metallicGold = Color(0xFFE8B923); // baseline rich gold
+  static const softGold = Color(0xFFF9D976);     // light highlight gold
+  static const darkGold = Color(0xFFC2901A);     // deep gold (shadow / text)
 
   // "cream" kept for compatibility but repointed to white + pale gold —
   // we no longer use a true cream anywhere in the app.

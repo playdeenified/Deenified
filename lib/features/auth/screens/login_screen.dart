@@ -431,16 +431,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: AppColors.richBlack,
       body: Stack(
         children: [
-          // Subtle radial gold glow behind the title
+          // Heavenly yellow -> white wash from the top.
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.softGold.withValues(alpha: 0.55),
+                    AppColors.softGold.withValues(alpha: 0.18),
+                    AppColors.richBlack,
+                  ],
+                  stops: const [0.0, 0.35, 0.75],
+                ),
+              ),
+            ),
+          ),
+          // Soft radial halo behind the title for a glowing centerpiece.
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0, -0.5),
-                  radius: 0.9,
+                  center: const Alignment(0, -0.55),
+                  radius: 0.8,
                   colors: [
-                    AppColors.metallicGold.withValues(alpha: 0.10),
-                    AppColors.richBlack,
+                    AppColors.metallicGold.withValues(alpha: 0.22),
+                    Colors.transparent,
                   ],
                 ),
               ),

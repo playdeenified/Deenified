@@ -522,7 +522,7 @@ class _VerseOfTheDayCard extends StatelessWidget {
                 style: GoogleFonts.outfit(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.metallicGold,
+                  color: AppColors.darkGold,
                   letterSpacing: 1.6,
                 ),
               ),
@@ -609,15 +609,15 @@ class _SurahSectionHeader extends StatelessWidget {
                 'See all',
                 style: GoogleFonts.outfit(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.metallicGold,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.darkGold,
                 ),
               ),
               const SizedBox(width: 2),
               const Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: AppColors.metallicGold,
+                color: AppColors.darkGold,
               ),
             ],
           ),

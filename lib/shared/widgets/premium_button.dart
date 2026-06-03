@@ -85,8 +85,15 @@ class _PremiumButtonState extends State<PremiumButton>
           padding: widget.padding ??
               const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
-            color:
-                widget.isOutlined ? Colors.transparent : AppColors.metallicGold,
+            // Radiant vertical gold gradient (highlight -> base) for depth.
+            gradient: widget.isOutlined
+                ? null
+                : const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.softGold, AppColors.metallicGold],
+                  ),
+            color: widget.isOutlined ? Colors.transparent : null,
             borderRadius: BorderRadius.circular(AppRadius.full),
             border: widget.isOutlined
                 ? Border.all(color: AppColors.metallicGold, width: 2)
@@ -94,10 +101,17 @@ class _PremiumButtonState extends State<PremiumButton>
             boxShadow: widget.isOutlined
                 ? null
                 : [
-                    BoxShadow(
+                    // Solid "3D" lip underneath.
+                    const BoxShadow(
                       color: AppColors.darkGold,
-                      offset: const Offset(0, 4),
+                      offset: Offset(0, 4),
                       blurRadius: 0,
+                    ),
+                    // Soft radiant glow.
+                    BoxShadow(
+                      color: AppColors.metallicGold.withValues(alpha: 0.45),
+                      offset: const Offset(0, 6),
+                      blurRadius: 18,
                     ),
                   ],
           ),
