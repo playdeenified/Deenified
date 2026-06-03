@@ -20,7 +20,7 @@ class SurahNumberBadge extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Gold sunburst — gradient gives it depth without going dark.
+          // Gold sunburst — gradient gives it depth.
           ShaderMask(
             shaderCallback: (rect) => const LinearGradient(
               begin: Alignment.topLeft,
@@ -29,23 +29,21 @@ class SurahNumberBadge extends StatelessWidget {
             ).createShader(rect),
             child: Icon(Icons.star_rounded, size: size, color: Colors.white),
           ),
-          // Soft inner disc holds the number.
-          Container(
-            width: size * 0.56,
-            height: size * 0.56,
-            decoration: const BoxDecoration(
-              color: AppColors.creamSoft,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$number',
-              style: GoogleFonts.outfit(
-                fontSize: size * 0.27,
-                fontWeight: FontWeight.w800,
-                color: AppColors.darkGold,
-                height: 1,
-              ),
+          // Number sits directly on the star — no inner circle.
+          Text(
+            '$number',
+            style: GoogleFonts.outfit(
+              fontSize: size * 0.30,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              height: 1,
+              shadows: [
+                Shadow(
+                  color: AppColors.darkGold.withValues(alpha: 0.6),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
           ),
         ],

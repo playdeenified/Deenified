@@ -188,25 +188,6 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
               ),
 
               const Spacer(),
-
-              // Subtle progress hint at the bottom
-              ClipRRect(
-                borderRadius: BorderRadius.circular(99),
-                child: SizedBox(
-                  width: 120,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 3,
-                    backgroundColor:
-                        AppColors.metallicGold.withValues(alpha: 0.12),
-                    valueColor: const AlwaysStoppedAnimation(
-                      AppColors.metallicGold,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         );

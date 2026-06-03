@@ -19,17 +19,22 @@ class AppTheme {
         secondaryContainer: AppColors.mint,
         tertiary: AppColors.darkGold,
         tertiaryContainer: AppColors.creamSoft,
-        appBarColor: AppColors.cream,
+        appBarColor: AppColors.richBlack,
         error: AppColors.error,
       ),
+      // blendLevel 0 = NO gold/cream tint blended into surfaces.
+      // Everything stays pure white unless a widget sets its own color.
       surfaceMode: FlexSurfaceMode.level,
-      blendLevel: 5,
+      blendLevel: 0,
       useMaterial3: true,
       textTheme: _textTheme,
       primaryTextTheme: _textTheme,
     ).copyWith(
       scaffoldBackgroundColor: AppColors.richBlack,
+      canvasColor: AppColors.richBlack,
       cardColor: AppColors.deepCharcoal,
+      // Kill Material 3 surface tinting (the source of the beige/cream cast).
+      applyElevationOverlayColor: false,
       dialogTheme:
           const DialogThemeData(backgroundColor: AppColors.deepCharcoal),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

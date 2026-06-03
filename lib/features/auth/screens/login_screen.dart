@@ -21,6 +21,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _signInPasswordVisible = false;
+  String? _signInError;
+  // Lets _handleSignIn refresh the bottom sheet UI (error text, spinner).
+  void Function(void Function())? _sheetSetState;
 
   @override
   void dispose() {
@@ -29,10 +32,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  void _setSheet(void Function() fn) {
+    fn();
+    _sheetSetState?.call(() {});
+  }
+
   Future<void> _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    _setSheet(() {
+      _isLoading = true;
+      _signInError = null;
+    });
 
     try {
       final response = await SupabaseService.instance.signIn(
@@ -54,31 +65,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } on AuthException catch (e) {
+      String message = 'Incorrect email or password. Please try again.';
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        message = 'Please confirm your email before signing in.';
+      } else if (e.message.toLowerCase().contains('rate limit') ||
+          e.message.toLowerCase().contains('too many')) {
+        message = 'Too many attempts. Wait a minute and try again.';
+      }
       if (mounted) {
-        String message = 'Incorrect email or password.';
-        if (e.message.toLowerCase().contains('email not confirmed')) {
-          message = 'Please confirm your email before signing in.';
-        } else if (e.message.toLowerCase().contains('rate limit') ||
-            e.message.toLowerCase().contains('too many')) {
-          message = 'Too many attempts. Wait a minute and try again.';
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              message,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            margin: const EdgeInsets.all(AppSpacing.md),
-          ),
-        );
+        _setSheet(() => _signInError = message);
       }
     } catch (e) {
+      if (mounted) {
+        _setSheet(() =>
+            _signInError = 'Something went wrong. Please try again.');
+      }
+      // Also surface a snackbar in case the sheet was dismissed.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -89,7 +91,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        _setSheet(() => _isLoading = false);
       }
     }
   }
@@ -194,8 +196,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _showSignInSheet() {
-    // Always hide password by default when the sheet opens.
+    // Always hide password + clear stale errors when the sheet opens.
     _signInPasswordVisible = false;
+    _signInError = null;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -212,6 +215,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             top: false,
             child: StatefulBuilder(
               builder: (context, setSheetState) {
+                _sheetSetState = setSheetState;
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl,
@@ -362,15 +366,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                        // Inline error — visible inside the sheet so the
+                        // user actually sees "wrong password".
+                        if (_signInError != null) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.10),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.md),
+                              border: Border.all(
+                                color:
+                                    AppColors.error.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: AppColors.error,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    _signInError!,
+                                    style: const TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
                         _isLoading
                             ? const Center(child: CircularProgressIndicator())
                             : PremiumButton(
                                 text: 'SIGN IN',
-                                onPressed: () async {
-                                  await _handleSignIn();
-                                  if (mounted) setSheetState(() {});
-                                },
+                                onPressed: _handleSignIn,
                               ),
                       ],
                     ),
