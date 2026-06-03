@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/router/app_router.dart';
 import '../../../providers/providers.dart';
+import '../../../shared/widgets/widgets.dart';
 
 /// Redesigned home screen — Cream & Gold theme.
 /// Mirrors the design reference: greeting row, "continue reading" hero card,
@@ -813,50 +814,6 @@ class _SurahNumberBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 52,
-      height: 52,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Gold sunburst behind the number.
-          Icon(
-            Icons.star,
-            size: 52,
-            color: AppColors.metallicGold.withValues(alpha: 0.85),
-          ),
-          // Inner black circle holds the number.
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: AppColors.heroBlack,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.metallicGold,
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.heroBlack.withValues(alpha: 0.15),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$number',
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.metallicGold,
-                height: 1,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return SurahNumberBadge(number: number);
   }
 }

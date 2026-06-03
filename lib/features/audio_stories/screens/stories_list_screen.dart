@@ -91,10 +91,15 @@ class StoriesListScreen extends ConsumerWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.deepCharcoal,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(
-                      color: AppColors.metallicGold.withValues(alpha: 0.3),
-                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.glassBorder),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -103,9 +108,16 @@ class StoriesListScreen extends ConsumerWidget {
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.richBlack,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.heroBlack,
+                              AppColors.heroBlackSoft,
+                            ],
+                          ),
                           borderRadius: const BorderRadius.horizontal(
-                            left: Radius.circular(AppRadius.md),
+                            left: Radius.circular(AppRadius.lg),
                           ),
                         ),
                         child: _buildCoverImage(story),

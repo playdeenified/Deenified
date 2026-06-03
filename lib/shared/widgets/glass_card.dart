@@ -88,12 +88,25 @@ class ContentCard extends StatelessWidget {
         margin: margin ?? const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: padding ?? const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.deepCharcoal,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          color: selected
+              ? AppColors.creamSoft
+              : AppColors.deepCharcoal,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
-            color: selected ? AppColors.metallicGold : AppColors.glassBorder,
-            width: selected ? 2 : 0.5,
+            color: selected
+                ? AppColors.metallicGold
+                : AppColors.glassBorder,
+            width: selected ? 2 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: selected
+                  ? AppColors.metallicGold.withValues(alpha: 0.18)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: selected ? 16 : 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: child,
       ),
