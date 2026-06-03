@@ -1,30 +1,45 @@
 import 'package:flutter/material.dart';
 
-/// App color palette following the "Black & Gold" system
-/// from designGuidelines.md
+/// App color palette — "Cream & Gold" light theme.
+/// Names preserved for backwards compatibility; values flipped to a light
+/// palette so existing screens inherit the new theme without changes.
 class AppColors {
   AppColors._();
 
-  // Primary Colors
-  static const richBlack = Color(0xFF0D0D0D);
-  static const deepCharcoal = Color(0xFF1A1A1A);
+  // Backgrounds — true white. Cream is strictly an accent.
+  static const richBlack = Color(0xFFFFFFFF);    // app background (pure white)
+  static const deepCharcoal = Color(0xFFFFFFFF); // card / surface (pure white)
+
+  // Gold accents (preserved)
   static const metallicGold = Color(0xFFD4AF37);
-  static const softGold = Color(0xFFC5A059);
+  static const softGold = Color(0xFFE8C66B);
   static const darkGold = Color(0xFFA67C00);
 
-  // Glass Effect
-  static const glassWhite = Color.fromRGBO(255, 255, 255, 0.05);
-  static const glassBorder = Color.fromRGBO(255, 255, 255, 0.1);
+  // True cream — used ONLY as accent on specific surfaces (badges, verse card)
+  static const cream = Color(0xFFF2E8D0);         // accent cream
+  static const creamSoft = Color(0xFFF8EEDA);     // verse-of-the-day card
+  static const heroBlack = Color(0xFF0A0A0A);     // hero / continue card
+  static const heroBlackSoft = Color(0xFF1A1A1A); // gradient end
+  static const mint = Color(0xFFC9E4D2);          // today badge bg
+  static const mintDeep = Color(0xFF4F8C66);      // today badge text
 
-  // Status Colors
+  // Borders / dividers (dark on light)
+  static const glassWhite = Color.fromRGBO(0, 0, 0, 0.03);
+  static const glassBorder = Color.fromRGBO(0, 0, 0, 0.08);
+
+  // Status colors (unchanged)
   static const success = Color(0xFF2E7D32);
   static const error = Color(0xFFC62828);
   static const warning = Color(0xFFFFB300);
 
-  // Text Colors
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFFB0B0B0);
-  static const textTertiary = Color(0xFF808080);
+  // Text (flipped — dark on cream)
+  static const textPrimary = Color(0xFF1A1A1A);
+  static const textSecondary = Color(0xFF6B6B6B);
+  static const textTertiary = Color(0xFF9A9A9A);
+
+  // Inverted text for use on dark hero cards
+  static const textOnHero = Color(0xFFFFFFFF);
+  static const textOnHeroMuted = Color(0xFFB0B0B0);
 }
 
 /// App spacing constants

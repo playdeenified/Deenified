@@ -2,11 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/router/app_router.dart';
 
-/// Main shell with bottom navigation
+/// Main shell with a floating "liquid glass" bottom tab bar.
 class MainShellScreen extends StatefulWidget {
   final Widget child;
 
@@ -18,6 +19,30 @@ class MainShellScreen extends StatefulWidget {
 
 class _MainShellScreenState extends State<MainShellScreen> {
   int _currentIndex = 0;
+
+  static const _items = <_NavItem>[
+    _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
+    _NavItem(
+      icon: Icons.menu_book_outlined,
+      activeIcon: Icons.menu_book_rounded,
+      label: 'Surah',
+    ),
+    _NavItem(
+      icon: Icons.headphones_outlined,
+      activeIcon: Icons.headphones,
+      label: 'Stories',
+    ),
+    _NavItem(
+      icon: Icons.auto_awesome_outlined,
+      activeIcon: Icons.auto_awesome,
+      label: 'Trivia',
+    ),
+    _NavItem(
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+      label: 'Profile',
+    ),
+  ];
 
   final List<String> _routes = [
     AppRoutes.home,
@@ -37,65 +62,173 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.richBlack,
       body: widget.child,
       extendBody: true,
-      bottomNavigationBar: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.richBlack.withOpacity(0.9),
-              border: const Border(
-                top: BorderSide(
-                  color: AppColors.glassBorder,
-                  width: 0.5,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              height: 72,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(40),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  width: 1,
                 ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.55),
+                    Colors.white.withValues(alpha: 0.35),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    blurRadius: 2,
+                    spreadRadius: -1,
+                    offset: const Offset(0, -1),
+                  ),
+                ],
               ),
-            ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: _onTap,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: AppColors.metallicGold,
-              unselectedItemColor: AppColors.textTertiary,
-              selectedLabelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              child: Stack(
+                children: [
+                  // Glassy inner highlight at the top edge
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0),
+                            Colors.white.withValues(alpha: 0.8),
+                            Colors.white.withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(_items.length, (i) {
+                      final item = _items[i];
+                      final active = i == _currentIndex;
+                      return _NavButton(
+                        item: item,
+                        active: active,
+                        onTap: () => _onTap(i),
+                      );
+                    }),
+                  ),
+                ],
               ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 12,
-              ),
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
-                  activeIcon: Icon(Icons.home),
-                  label: 'Home',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.menu_book_outlined),
-                  activeIcon: Icon(Icons.menu_book),
-                  label: 'Surah',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.headphones_outlined),
-                  activeIcon: Icon(Icons.headphones),
-                  label: 'Stories',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.quiz_outlined),
-                  activeIcon: Icon(Icons.quiz),
-                  label: 'Trivia',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline),
-                  activeIcon: Icon(Icons.person),
-                  label: 'Profile',
-                ),
-              ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
+
+  final _NavItem item;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: active
+                    ? AppColors.softGold.withValues(alpha: 0.45)
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color:
+                              AppColors.metallicGold.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          spreadRadius: 0,
+                        ),
+                      ]
+                    : [],
+              ),
+              alignment: Alignment.center,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  active ? item.activeIcon : item.icon,
+                  key: ValueKey(active),
+                  size: 22,
+                  color: active
+                      ? AppColors.heroBlack
+                      : AppColors.textTertiary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color:
+                    active ? AppColors.textPrimary : AppColors.textTertiary,
+              ),
+              child: Text(item.label),
+            ),
+          ],
         ),
       ),
     );

@@ -20,6 +20,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _signInPasswordVisible = false;
 
   @override
   void dispose() {
@@ -54,14 +55,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) {
-        String message = 'Invalid Username or Password';
-        if (e.message.contains('Email not confirmed')) {
+        String message = 'Incorrect email or password.';
+        if (e.message.toLowerCase().contains('email not confirmed')) {
           message = 'Please confirm your email before signing in.';
+        } else if (e.message.toLowerCase().contains('rate limit') ||
+            e.message.toLowerCase().contains('too many')) {
+          message = 'Too many attempts. Wait a minute and try again.';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
+            content: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            margin: const EdgeInsets.all(AppSpacing.md),
           ),
         );
       }
@@ -181,6 +194,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _showSignInSheet() {
+    // Always hide password by default when the sheet opens.
+    _signInPasswordVisible = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -296,10 +311,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: AppSpacing.md),
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: !_signInPasswordVisible,
                           decoration: InputDecoration(
                             labelText: 'Password',
                             prefixIcon: const Icon(Icons.lock_outlined),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _signInPasswordVisible
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: AppColors.textTertiary,
+                              ),
+                              onPressed: () {
+                                setSheetState(() {
+                                  _signInPasswordVisible =
+                                      !_signInPasswordVisible;
+                                });
+                              },
+                            ),
                             border: OutlineInputBorder(
                               borderRadius:
                                   BorderRadius.circular(AppRadius.md),

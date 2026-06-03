@@ -8,6 +8,7 @@ import '../../features/home/screens/main_shell_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/surah_mastery/screens/surah_list_screen.dart';
 import '../../features/surah_mastery/screens/surah_detail_screen.dart';
+import '../../features/surah_mastery/screens/surah_search_screen.dart';
 import '../../features/surah_mastery/screens/quiz_screen.dart';
 import '../../features/surah_mastery/screens/surah_reader_screen.dart';
 import '../../features/audio_stories/screens/stories_list_screen.dart';
@@ -23,6 +24,7 @@ class AppRoutes {
   static const onboarding = '/onboarding';
   static const home = '/home';
   static const surahs = '/surahs';
+  static const surahSearch = '/search';
   static const surahDetail = '/surah/:id';
   static const quiz = '/quiz/:surahId';
   static const stories = '/stories';
@@ -116,6 +118,12 @@ final appRouter = GoRouter(
           ),
         ),
       ],
+    ),
+
+    GoRoute(
+      path: AppRoutes.surahSearch,
+      pageBuilder: (context, state) =>
+          _fadePage(state, const SurahSearchScreen()),
     ),
 
     GoRoute(

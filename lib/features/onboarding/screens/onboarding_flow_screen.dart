@@ -88,38 +88,48 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     return Scaffold(
       backgroundColor: AppColors.richBlack,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             // Top bar with back button + progress
             if (!hideProgressBar)
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.sm,
+                  AppSpacing.xs,
+                  AppSpacing.lg,
+                  AppSpacing.sm,
                 ),
                 child: Row(
                   children: [
-                    // Back button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 20,
-                        color: AppColors.textSecondary,
+                    GestureDetector(
+                      onTap: _handleBack,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: AppColors.deepCharcoal,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.arrow_back,
+                          size: 18,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                      onPressed: _handleBack,
                     ),
-
-                    // Progress bar
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.xl),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.full),
                         child: LinearProgressIndicator(
                           value: (onboardingState.currentStep + 1) /
                               totalOnboardingSteps,
-                          backgroundColor: AppColors.deepCharcoal,
+                          backgroundColor: AppColors.metallicGold
+                              .withValues(alpha: 0.18),
                           color: AppColors.metallicGold,
                           minHeight: 6,
-                          borderRadius: BorderRadius.circular(AppRadius.full),
                         ),
                       ),
                     ),
@@ -127,8 +137,43 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 ),
               ),
 
+            // White surface that hosts each onboarding screen.
             Expanded(
-              child: PageView(
+              child: Container(
+                margin: EdgeInsets.fromLTRB(
+                  hideProgressBar ? 0 : AppSpacing.md,
+                  hideProgressBar ? 0 : AppSpacing.xs,
+                  hideProgressBar ? 0 : AppSpacing.md,
+                  0,
+                ),
+                decoration: BoxDecoration(
+                  color: hideProgressBar
+                      ? AppColors.richBlack
+                      : AppColors.deepCharcoal,
+                  borderRadius: hideProgressBar
+                      ? BorderRadius.zero
+                      : const BorderRadius.only(
+                          topLeft: Radius.circular(32),
+                          topRight: Radius.circular(32),
+                        ),
+                  boxShadow: hideProgressBar
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 20,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
+                ),
+                child: ClipRRect(
+                  borderRadius: hideProgressBar
+                      ? BorderRadius.zero
+                      : const BorderRadius.only(
+                          topLeft: Radius.circular(32),
+                          topRight: Radius.circular(32),
+                        ),
+                  child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(), // Disable swipe
                 children: const [
@@ -166,6 +211,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                   PaywallScreen(), // 20 — RevenueCat
                   SignupFormScreen(), // 21 — Account creation
                 ],
+                  ),
+                ),
               ),
             ),
           ],

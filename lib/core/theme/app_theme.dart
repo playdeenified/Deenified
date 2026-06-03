@@ -9,22 +9,21 @@ import '../constants/app_constants.dart';
 class AppTheme {
   AppTheme._();
 
-  /// Dark theme - the primary theme for Deenified
+  /// Light theme - the primary theme for Deenified ("Cream & Gold").
   static ThemeData get darkTheme {
-    return FlexThemeData.dark(
+    return FlexThemeData.light(
       colors: const FlexSchemeColor(
         primary: AppColors.metallicGold,
-        primaryContainer: AppColors.darkGold,
-        secondary: AppColors.softGold,
-        secondaryContainer: AppColors.deepCharcoal,
-        tertiary: AppColors.softGold,
-        tertiaryContainer: AppColors.deepCharcoal,
-        appBarColor: AppColors.richBlack,
+        primaryContainer: AppColors.softGold,
+        secondary: AppColors.mintDeep,
+        secondaryContainer: AppColors.mint,
+        tertiary: AppColors.darkGold,
+        tertiaryContainer: AppColors.creamSoft,
+        appBarColor: AppColors.cream,
         error: AppColors.error,
       ),
       surfaceMode: FlexSurfaceMode.level,
-      blendLevel: 15,
-      darkIsTrueBlack: true,
+      blendLevel: 5,
       useMaterial3: true,
       textTheme: _textTheme,
       primaryTextTheme: _textTheme,
@@ -34,7 +33,7 @@ class AppTheme {
       dialogTheme:
           const DialogThemeData(backgroundColor: AppColors.deepCharcoal),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.richBlack,
+        backgroundColor: AppColors.deepCharcoal,
         selectedItemColor: AppColors.metallicGold,
         unselectedItemColor: AppColors.textTertiary,
         type: BottomNavigationBarType.fixed,
@@ -54,16 +53,16 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.metallicGold,
-          foregroundColor: AppColors.richBlack,
-          elevation: 4,
+          foregroundColor: AppColors.heroBlack,
+          elevation: 0,
           shadowColor: AppColors.darkGold,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppRadius.full),
           ),
           textStyle: GoogleFonts.outfit(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

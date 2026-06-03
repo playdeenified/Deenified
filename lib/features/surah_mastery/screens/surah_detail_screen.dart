@@ -33,53 +33,74 @@ class SurahDetailScreen extends ConsumerWidget {
 
     return CustomScrollView(
       slivers: [
-        // Hero Header
+        // Hero Header — black card with gold accent on cream
         SliverAppBar(
-          expandedHeight: 240,
+          expandedHeight: 260,
           pinned: true,
-          backgroundColor: AppColors.deepCharcoal,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.metallicGold.withValues(alpha: 0.3),
-                    AppColors.richBlack,
-                  ],
+          backgroundColor: AppColors.richBlack,
+          surfaceTintColor: AppColors.cream,
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).maybePop(),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.deepCharcoal,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                  size: 20,
                 ),
               ),
-              child: SafeArea(
+            ),
+          ),
+          flexibleSpace: FlexibleSpaceBar(
+            background: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                kToolbarHeight + 12,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.heroBlack, AppColors.heroBlackSoft],
+                  ),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
-                    // Arabic Name
                     Text(
                       surah['name_arabic'] ?? '',
                       style:
-                          Theme.of(context).textTheme.displayMedium?.copyWith(
+                          Theme.of(context).textTheme.displaySmall?.copyWith(
                                 fontFamily: 'Amiri',
                                 color: AppColors.metallicGold,
                               ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    // Transliteration Name
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       surah['name_transliteration'] ?? '',
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
+                                color: AppColors.textOnHero,
+                                fontWeight: FontWeight.w700,
                               ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    // English Translation
+                    const SizedBox(height: 2),
                     Text(
                       surah['name_english'] ?? '',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.textOnHeroMuted,
                           ),
                     ),
                   ],

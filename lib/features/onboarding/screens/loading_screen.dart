@@ -1,11 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../providers/onboarding_provider.dart';
 
+/// Smooth, continuous loading screen used between onboarding phases.
+/// Uses an AnimationController for buttery-smooth progress instead of a
+/// stepped Timer, plus a gentle breathing halo behind the spinner.
 class LoadingScreen extends ConsumerStatefulWidget {
   const LoadingScreen({super.key});
 
@@ -13,10 +14,11 @@ class LoadingScreen extends ConsumerStatefulWidget {
   ConsumerState<LoadingScreen> createState() => _LoadingScreenState();
 }
 
-class _LoadingScreenState extends ConsumerState<LoadingScreen> {
-  int _currentMessageIndex = 0;
-  double _progress = 0.0;
-  Timer? _animTimer;
+class _LoadingScreenState extends ConsumerState<LoadingScreen>
+    with TickerProviderStateMixin {
+  late final AnimationController _progressController;
+  late final AnimationController _breatheController;
+  bool _advanced = false;
 
   final List<String> _messages = [
     'Analyzing your learning style...',
@@ -30,100 +32,182 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    _startLoadingAnimation();
+
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 5200),
+    )
+      ..addListener(_handleTick)
+      ..forward();
+
+    _breatheController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
   }
 
-  void _startLoadingAnimation() {
-    const totalDuration = Duration(seconds: 4);
-    const updateInterval = Duration(milliseconds: 100);
-    int steps = totalDuration.inMilliseconds ~/ updateInterval.inMilliseconds;
-    int currentStep = 0;
-
-    _animTimer = Timer.periodic(updateInterval, (timer) {
-      currentStep++;
-
-      setState(() {
-        _progress = currentStep / steps;
-
-        // Update message every ~15% progress
-        int msgIndex = (_progress * _messages.length).floor();
-        if (msgIndex < _messages.length) {
-          _currentMessageIndex = msgIndex;
+  void _handleTick() {
+    if (!_advanced && _progressController.value >= 1.0) {
+      _advanced = true;
+      // Give the user a beat to read the final message, then advance.
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) {
+          ref.read(onboardingProvider.notifier).nextStep();
         }
       });
-
-      if (currentStep >= steps) {
-        timer.cancel();
-        // Move to next screen automatically
-        ref.read(onboardingProvider.notifier).nextStep();
-      }
-    });
-
-    // Preload next step assets or data here if needed
+    }
   }
 
   @override
   void dispose() {
-    _animTimer?.cancel();
+    _progressController
+      ..removeListener(_handleTick)
+      ..dispose();
+    _breatheController.dispose();
     super.dispose();
+  }
+
+  int _messageIndex(double progress) {
+    final i = (progress * _messages.length).floor();
+    return i.clamp(0, _messages.length - 1);
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
+    return AnimatedBuilder(
+      animation: _progressController,
+      builder: (context, _) {
+        final progress = Curves.easeInOutCubic.transform(
+          _progressController.value,
+        );
+        final messageIndex = _messageIndex(progress);
+        final percent = (progress * 100).round();
+
+        return Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - AppSpacing.xl * 2),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: AppSpacing.xl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
 
-                // Spinner
-                SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: CircularProgressIndicator(
-                    value: _progress,
-                    strokeWidth: 6,
-                    backgroundColor: AppColors.deepCharcoal,
-                    valueColor:
-                        const AlwaysStoppedAnimation(AppColors.metallicGold),
-                  ),
+              // Breathing halo behind the spinner
+              SizedBox(
+                width: 140,
+                height: 140,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _breatheController,
+                      builder: (context, _) {
+                        final scale = 0.85 + (_breatheController.value * 0.20);
+                        final opacity =
+                            0.10 + (0.15 * (1 - _breatheController.value));
+                        return Transform.scale(
+                          scale: scale,
+                          child: Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  AppColors.metallicGold
+                                      .withValues(alpha: opacity),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(
+                      width: 92,
+                      height: 92,
+                      child: CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 5,
+                        backgroundColor: AppColors.metallicGold
+                            .withValues(alpha: 0.12),
+                        valueColor: const AlwaysStoppedAnimation(
+                          AppColors.metallicGold,
+                        ),
+                        strokeCap: StrokeCap.round,
+                      ),
+                    ),
+                    Text(
+                      '$percent%',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AppColors.metallicGold,
+                                fontWeight: FontWeight.w700,
+                              ),
+                    ),
+                  ],
                 ),
+              ),
 
-                const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.xxl),
 
-                // Changing Text
-                SizedBox(
-                  height: 60,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
+              // Smooth cross-fade between messages
+              SizedBox(
+                height: 60,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 420),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.25),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    key: ValueKey<int>(messageIndex),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
                     child: Text(
-                      _messages[_currentMessageIndex],
-                      key: ValueKey<int>(_currentMessageIndex),
+                      _messages[messageIndex],
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
                           ),
                     ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: AppSpacing.xxl),
+              const Spacer(),
 
-                Text(
-                  '${(_progress * 100).toInt()}%',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
+              // Subtle progress hint at the bottom
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: SizedBox(
+                  width: 120,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 3,
+                    backgroundColor:
+                        AppColors.metallicGold.withValues(alpha: 0.12),
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppColors.metallicGold,
+                    ),
+                  ),
                 ),
+              ),
 
-                const SizedBox(height: AppSpacing.xl),
-              ],
-            ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
           ),
         );
       },
