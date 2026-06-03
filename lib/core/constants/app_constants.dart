@@ -10,10 +10,10 @@ class AppColors {
   static const richBlack = Color(0xFFFFFFFF);    // app background (pure white)
   static const deepCharcoal = Color(0xFFFFFFFF); // card / surface (pure white)
 
-  // Gold accents (preserved)
-  static const metallicGold = Color(0xFFD4AF37);
-  static const softGold = Color(0xFFE8C66B);
-  static const darkGold = Color(0xFFA67C00);
+  // Bright yellow accent system (replaces the old muddy gold)
+  static const metallicGold = Color(0xFFFFC400); // bright yellow-gold
+  static const softGold = Color(0xFFFFE07A);     // light yellow
+  static const darkGold = Color(0xFFE5A600);     // deeper yellow (text on white)
 
   // "cream" kept for compatibility but repointed to white + pale gold —
   // we no longer use a true cream anywhere in the app.

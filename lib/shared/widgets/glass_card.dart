@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/constants/app_constants.dart';
 
@@ -82,7 +83,12 @@ class ContentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.lightImpact();
+              onTap!();
+            },
       child: AnimatedContainer(
         duration: AppDurations.fast,
         margin: margin ?? const EdgeInsets.only(bottom: AppSpacing.sm),

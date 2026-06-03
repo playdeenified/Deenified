@@ -247,9 +247,26 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => _showExitDialog(context),
         ),
-        title: Text(
-          '${_currentQuestionIndex + 1} / ${_questions.length}',
-          style: Theme.of(context).textTheme.titleMedium,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _isDailyChallenge ? 'Daily Challenge' : 'Trivia',
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
+              style: const TextStyle(
+                color: AppColors.metallicGold,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
       ),

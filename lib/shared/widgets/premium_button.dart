@@ -87,9 +87,9 @@ class _PremiumButtonState extends State<PremiumButton>
           decoration: BoxDecoration(
             color:
                 widget.isOutlined ? Colors.transparent : AppColors.metallicGold,
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppRadius.full),
             border: widget.isOutlined
-                ? Border.all(color: AppColors.softGold, width: 1.5)
+                ? Border.all(color: AppColors.metallicGold, width: 2)
                 : null,
             boxShadow: widget.isOutlined
                 ? null
@@ -108,7 +108,7 @@ class _PremiumButtonState extends State<PremiumButton>
                     width: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(AppColors.richBlack),
+                      valueColor: AlwaysStoppedAnimation(AppColors.heroBlack),
                     ),
                   ),
                 )
@@ -120,8 +120,8 @@ class _PremiumButtonState extends State<PremiumButton>
                       Icon(
                         widget.icon,
                         color: widget.isOutlined
-                            ? AppColors.metallicGold
-                            : AppColors.richBlack,
+                            ? AppColors.darkGold
+                            : AppColors.heroBlack,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -130,10 +130,10 @@ class _PremiumButtonState extends State<PremiumButton>
                       widget.text,
                       style: TextStyle(
                         color: widget.isOutlined
-                            ? AppColors.metallicGold
-                            : AppColors.richBlack,
+                            ? AppColors.darkGold
+                            : AppColors.heroBlack,
                         fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
                       ),
                     ),

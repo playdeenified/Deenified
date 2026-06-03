@@ -63,9 +63,9 @@ class OurMissionScreen extends ConsumerWidget {
                   'Make Deen Easy\nto Return To.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppColors.metallicGold,
+                        color: AppColors.textPrimary,
                         height: 1.15,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                       ),
                 ),
 

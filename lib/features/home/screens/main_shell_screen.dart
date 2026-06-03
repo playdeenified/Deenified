@@ -18,8 +18,6 @@ class MainShellScreen extends StatefulWidget {
 }
 
 class _MainShellScreenState extends State<MainShellScreen> {
-  int _currentIndex = 0;
-
   static const _items = <_NavItem>[
     _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
     _NavItem(
@@ -52,9 +50,16 @@ class _MainShellScreenState extends State<MainShellScreen> {
     AppRoutes.profile,
   ];
 
+  // Active tab is derived from the current route so navigating here from
+  // anywhere (e.g. tapping the profile avatar) keeps the bar in sync.
+  int get _currentIndex {
+    final loc = GoRouterState.of(context).uri.toString();
+    final i = _routes.indexWhere((r) => loc.startsWith(r));
+    return i < 0 ? 0 : i;
+  }
+
   void _onTap(int index) {
     if (index != _currentIndex) {
-      setState(() => _currentIndex = index);
       context.go(_routes[index]);
     }
   }

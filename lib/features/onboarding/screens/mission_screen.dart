@@ -43,7 +43,8 @@ class MissionScreen extends ConsumerWidget {
                   'Your Deen.\nSimplified.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        color: AppColors.metallicGold,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
                         height: 1.2,
                       ),
                 ),
