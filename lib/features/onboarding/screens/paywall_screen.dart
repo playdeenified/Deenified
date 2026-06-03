@@ -207,8 +207,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   Text(
                     'Unlock Full Access',
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: AppColors.metallicGold,
-                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Start your journey with the Qur\'an today.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                     textAlign: TextAlign.center,
                   ),
