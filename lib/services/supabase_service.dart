@@ -111,24 +111,78 @@ class SupabaseService {
 
   // ============ QUIZ ============
 
-  /// Get quiz questions for a surah (surah_mastery category)
+  /// Get quiz questions for a surah (surah_mastery category).
+  /// Uses the get_quiz_questions_for_user RPC so it skips questions
+  /// the current user has already answered and cycles back to the
+  /// oldest-answered ones once the fresh pool is exhausted.
   Future<List<Map<String, dynamic>>> getSurahQuizQuestions(int surahId) async {
-    return await client
-        .from('quiz_questions')
-        .select()
-        .eq('surah_id', surahId)
-        .eq('category', 'surah_mastery')
-        .limit(12);
+    final userId = currentUser?.id;
+    if (userId == null) {
+      // Fallback for unauthenticated state — plain random sample
+      return await client
+          .from('quiz_questions')
+          .select()
+          .eq('surah_id', surahId)
+          .eq('category', 'surah_mastery')
+          .limit(12);
+    }
+
+    final result = await client.rpc(
+      'get_quiz_questions_for_user',
+      params: {
+        'p_user_id': userId,
+        'p_category': 'surah_mastery',
+        'p_surah_id': surahId,
+        'p_limit': 12,
+      },
+    );
+    return List<Map<String, dynamic>>.from(result as List);
   }
 
-  /// Get practice questions by category (fiqh, seerah, aqeedah, etc.)
+  /// Get practice questions by category (quran, seerah, prophets, etc.).
+  /// Uses the get_quiz_questions_for_user RPC so it skips questions
+  /// the current user has already answered.
   Future<List<Map<String, dynamic>>> getPracticeQuestions(
       String category) async {
-    return await client
-        .from('quiz_questions')
-        .select()
-        .eq('category', category)
-        .limit(15);
+    final userId = currentUser?.id;
+    if (userId == null) {
+      return await client
+          .from('quiz_questions')
+          .select()
+          .eq('category', category)
+          .limit(15);
+    }
+
+    final result = await client.rpc(
+      'get_quiz_questions_for_user',
+      params: {
+        'p_user_id': userId,
+        'p_category': category,
+        'p_surah_id': null,
+        'p_limit': 15,
+      },
+    );
+    return List<Map<String, dynamic>>.from(result as List);
+  }
+
+  /// Record that the user answered a question (correct or not).
+  /// Powers the "don't repeat" logic and feeds future analytics.
+  Future<void> logQuestionAnswered({
+    required String questionId,
+    required bool wasCorrect,
+  }) async {
+    final userId = currentUser?.id;
+    if (userId == null) return;
+
+    await client.from('user_question_history').upsert(
+      {
+        'user_id': userId,
+        'question_id': questionId,
+        'was_correct': wasCorrect,
+        'answered_at': DateTime.now().toIso8601String(),
+      },
+      onConflict: 'user_id,question_id',
+    );
   }
 
   /// Get today's daily challenge

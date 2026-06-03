@@ -99,6 +99,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         final correctIdx = parsed.indexWhere((o) => o.correct);
 
         return _ParsedQuestion(
+          id: row['id'] as String? ?? '',
           question: row['question_text'] as String? ?? 'Question',
           options: parsed.map((o) => o.text).toList(),
           correctIndex: correctIdx >= 0 ? correctIdx : 0,
@@ -130,14 +131,24 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   void _submitAnswer() {
     if (_selectedAnswerIndex == null) return;
 
+    final question = _questions[_currentQuestionIndex];
+    final wasCorrect = _selectedAnswerIndex == question.correctIndex;
+
     HapticFeedback.mediumImpact();
     setState(() {
       _answerSubmitted = true;
-      if (_selectedAnswerIndex ==
-          _questions[_currentQuestionIndex].correctIndex) {
+      if (wasCorrect) {
         _correctAnswers++;
       }
     });
+
+    // Record this answer so the user doesn't see the same question again.
+    if (question.id.isNotEmpty) {
+      SupabaseService.instance.logQuestionAnswered(
+        questionId: question.id,
+        wasCorrect: wasCorrect,
+      );
+    }
   }
 
   void _nextQuestion() {
@@ -553,12 +564,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 }
 
 class _ParsedQuestion {
+  final String id;
   final String question;
   final List<String> options;
   final int correctIndex;
   final String? explanation;
 
   _ParsedQuestion({
+    required this.id,
     required this.question,
     required this.options,
     required this.correctIndex,
