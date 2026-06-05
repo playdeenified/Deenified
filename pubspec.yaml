@@ -74,7 +74,9 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icons/Deenified_Icon.png"
-  adaptive_icon_background: "#FFD700"
+  remove_alpha_ios: true
+  background_color_ios: "#1A1A1A"
+  adaptive_icon_background: "#1A1A1A"
   adaptive_icon_foreground: "assets/icons/Deenified_Icon.png"
 
 flutter:
