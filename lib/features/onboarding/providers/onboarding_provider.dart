@@ -71,15 +71,32 @@ class Onboarding extends _$Onboarding {
     return const OnboardingState();
   }
 
-  /// Go to next step
+  /// Timestamp of the last navigation, used to debounce rapid double-taps.
+  /// Without this, a fast double-tap on a CONTINUE/UNLOCK button fires
+  /// nextStep() twice and skips a whole screen — including the paywall.
+  DateTime? _lastNavAt;
+
+  bool get _navLocked {
+    final now = DateTime.now();
+    if (_lastNavAt != null &&
+        now.difference(_lastNavAt!) < const Duration(milliseconds: 600)) {
+      return true;
+    }
+    _lastNavAt = now;
+    return false;
+  }
+
+  /// Go to next step (debounced against double-taps)
   void nextStep() {
+    if (_navLocked) return;
     if (state.currentStep < totalOnboardingSteps - 1) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
   }
 
-  /// Go to previous step
+  /// Go to previous step (debounced against double-taps)
   void previousStep() {
+    if (_navLocked) return;
     if (state.currentStep > 0) {
       state = state.copyWith(currentStep: state.currentStep - 1);
     }

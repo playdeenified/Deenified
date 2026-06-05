@@ -22,7 +22,6 @@ class AudioPlayerScreen extends ConsumerStatefulWidget {
 
 class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   late final AudioPlayer _player;
-  bool _isLoadingAudio = true;
   bool _progressLoaded = false;
   String? _audioError;
 
@@ -37,8 +36,11 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     _player = AudioPlayer();
   }
 
+  bool _loadStarted = false;
+
   Future<void> _loadAudio(String audioPath) async {
-    if (!_isLoadingAudio) return; // Already loaded or loading
+    if (_loadStarted) return; // Fire exactly once
+    _loadStarted = true;
     try {
       final url = Supabase.instance.client.storage
           .from('audio-files')
@@ -62,14 +64,13 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
         }
       }
 
-      setState(() {
-        _isLoadingAudio = false;
-      });
+      if (mounted) setState(() {});
     } catch (e) {
-      setState(() {
-        _isLoadingAudio = false;
-        _audioError = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _audioError = e.toString();
+        });
+      }
     }
   }
 
@@ -117,21 +118,13 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: AppColors.heroBlack),
           onPressed: () async {
             await _saveProgress();
             _player.stop();
             if (context.mounted) context.pop();
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {
-              // Show options menu
-            },
-          ),
-        ],
       ),
       body: storyAsync.when(
         data: (story) {
@@ -289,7 +282,8 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                 SliderTheme(
                                   data: SliderTheme.of(context).copyWith(
                                     activeTrackColor: AppColors.metallicGold,
-                                    inactiveTrackColor: AppColors.deepCharcoal,
+                                    inactiveTrackColor: AppColors.metallicGold
+                                        .withValues(alpha: 0.18),
                                     thumbColor: AppColors.metallicGold,
                                     overlayColor: AppColors.metallicGold
                                         .withValues(alpha: 0.2),
@@ -393,7 +387,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                     : newPos);
                               },
                               icon: const Icon(Icons.replay_10, size: 36),
-                              color: AppColors.textPrimary,
+                              color: AppColors.heroBlack,
                             ),
 
                             const SizedBox(width: AppSpacing.lg),
@@ -430,7 +424,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                         width: 40,
                                         height: 40,
                                         child: CircularProgressIndicator(
-                                          color: AppColors.richBlack,
+                                          color: AppColors.heroBlack,
                                           strokeWidth: 3,
                                         ),
                                       )
@@ -439,7 +433,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                             ? Icons.pause
                                             : Icons.play_arrow,
                                         size: 40,
-                                        color: AppColors.richBlack,
+                                        color: AppColors.heroBlack,
                                       ),
                               ),
                             ),
@@ -458,7 +452,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                     newPos > duration ? duration : newPos);
                               },
                               icon: const Icon(Icons.forward_10, size: 36),
-                              color: AppColors.textPrimary,
+                              color: AppColors.heroBlack,
                             ),
                           ],
                         );
