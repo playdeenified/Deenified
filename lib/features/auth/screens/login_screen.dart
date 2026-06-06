@@ -18,7 +18,6 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _signInPasswordVisible = false;
   String? _signInError;
@@ -37,8 +36,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _sheetSetState?.call(() {});
   }
 
-  Future<void> _handleSignIn() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _handleSignIn(GlobalKey<FormState> formKey) async {
+    if (!formKey.currentState!.validate()) return;
 
     _setSheet(() {
       _isLoading = true;
@@ -199,6 +198,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Always hide password + clear stale errors when the sheet opens.
     _signInPasswordVisible = false;
     _signInError = null;
+    // Fresh form key per sheet open — never share a GlobalKey across the
+    // screen's lifecycle (caused a Duplicate GlobalKey crash during the
+    // sign-out -> login transition when two screens briefly coexisted).
+    final sheetFormKey = GlobalKey<FormState>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -216,7 +219,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: StatefulBuilder(
               builder: (context, setSheetState) {
                 _sheetSetState = setSheetState;
-                return Padding(
+                return SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl,
                     AppSpacing.md,
@@ -224,7 +227,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     AppSpacing.xl,
                   ),
                   child: Form(
-                    key: _formKey,
+                    key: sheetFormKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -411,7 +414,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ? const Center(child: CircularProgressIndicator())
                             : PremiumButton(
                                 text: 'SIGN IN',
-                                onPressed: _handleSignIn,
+                                onPressed: () => _handleSignIn(sheetFormKey),
                               ),
                       ],
                     ),
