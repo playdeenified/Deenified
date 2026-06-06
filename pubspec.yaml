@@ -2,7 +2,7 @@ name: deenified
 description: "The World's First Islamic Trivia App That Makes Learning Addictive."
 publish_to: 'none'
 
-version: 1.1.0+2
+version: 1.1.0+3
 
 environment:
   sdk: ^3.6.0
