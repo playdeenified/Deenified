@@ -79,27 +79,11 @@ class Onboarding extends _$Onboarding {
     return const OnboardingState();
   }
 
-  /// Timestamp of the last navigation, used to debounce rapid double-taps.
-  /// Without this, a fast double-tap on a CONTINUE/UNLOCK button fires
-  /// nextStep() twice and skips a whole screen — including the paywall.
-  DateTime? _lastNavAt;
-
-  bool get _navLocked {
-    final now = DateTime.now();
-    if (_lastNavAt != null &&
-        now.difference(_lastNavAt!) < const Duration(milliseconds: 600)) {
-      return true;
-    }
-    _lastNavAt = now;
-    return false;
-  }
-
-  /// Go to next step (debounced against double-taps).
-  /// HARD GATE: cannot advance past the paywall without purchasing —
-  /// this makes the paywall unskippable even if a tap slips past the
-  /// debounce or any other navigation fires unexpectedly.
+  /// Go to next step.
+  /// HARD GATE: cannot advance past the paywall without a verified
+  /// purchase/restore. This single gate is what makes the paywall
+  /// unskippable — even a double-tap lands on the paywall and stops there.
   void nextStep() {
-    if (_navLocked) return;
     if (state.currentStep == paywallStepIndex && !state.paywallPassed) {
       return;
     }
@@ -114,9 +98,8 @@ class Onboarding extends _$Onboarding {
     state = state.copyWith(paywallPassed: true);
   }
 
-  /// Go to previous step (debounced against double-taps)
+  /// Go to previous step
   void previousStep() {
-    if (_navLocked) return;
     if (state.currentStep > 0) {
       state = state.copyWith(currentStep: state.currentStep - 1);
     }
