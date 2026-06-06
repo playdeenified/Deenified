@@ -20,6 +20,9 @@ class _RatingsScreenState extends ConsumerState<RatingsScreen>
     with SingleTickerProviderStateMixin {
   final _inAppReview = InAppReview.instance;
   late final AnimationController _shimmer;
+  // Once they tap "Rate Us", the button becomes "Continue" and they stay
+  // on the screen until they manually advance.
+  bool _rated = false;
 
   @override
   void initState() {
@@ -41,15 +44,20 @@ class _RatingsScreenState extends ConsumerState<RatingsScreen>
     try {
       if (await _inAppReview.isAvailable()) {
         await _inAppReview.requestReview();
-      } else {
-        await _inAppReview.openStoreListing(appStoreId: '');
       }
     } catch (_) {
       // Never block onboarding on a rating failure.
     }
+    // Do NOT auto-advance — flip the button to "Continue" and let the user
+    // tap it themselves once they're done with the rating prompt.
     if (mounted) {
-      ref.read(onboardingProvider.notifier).nextStep();
+      setState(() => _rated = true);
     }
+  }
+
+  void _advance() {
+    HapticFeedback.lightImpact();
+    ref.read(onboardingProvider.notifier).nextStep();
   }
 
   @override
@@ -111,24 +119,32 @@ class _RatingsScreenState extends ConsumerState<RatingsScreen>
 
           SizedBox(
             width: double.infinity,
-            child: PremiumButton(
-              text: 'RATE US',
-              icon: Icons.favorite_rounded,
-              onPressed: _requestReview,
-            ),
+            child: _rated
+                ? PremiumButton(
+                    text: 'CONTINUE',
+                    onPressed: _advance,
+                  )
+                : PremiumButton(
+                    text: 'RATE US',
+                    icon: Icons.favorite_rounded,
+                    onPressed: _requestReview,
+                  ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextButton(
-            onPressed: () =>
-                ref.read(onboardingProvider.notifier).nextStep(),
-            child: Text(
-              'Maybe later',
-              style: TextStyle(
-                color: AppColors.textTertiary,
-                fontWeight: FontWeight.w600,
+          // "Maybe later" only before they've rated.
+          if (!_rated)
+            TextButton(
+              onPressed: _advance,
+              child: Text(
+                'Maybe later',
+                style: TextStyle(
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ),
+            )
+          else
+            const SizedBox(height: 40),
           const SizedBox(height: AppSpacing.sm),
         ],
       ),

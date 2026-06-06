@@ -14,6 +14,7 @@ class OnboardingState {
   final String? commitmentLevel;
   final String? referralSource;
   final String? referralInfluencer;
+  final bool paywallPassed;
   final bool isComplete;
 
   const OnboardingState({
@@ -27,6 +28,7 @@ class OnboardingState {
     this.commitmentLevel,
     this.referralSource,
     this.referralInfluencer,
+    this.paywallPassed = false,
     this.isComplete = false,
   });
 
@@ -41,6 +43,7 @@ class OnboardingState {
     String? commitmentLevel,
     String? referralSource,
     String? referralInfluencer,
+    bool? paywallPassed,
     bool? isComplete,
   }) {
     return OnboardingState(
@@ -55,6 +58,7 @@ class OnboardingState {
       commitmentLevel: commitmentLevel ?? this.commitmentLevel,
       referralSource: referralSource ?? this.referralSource,
       referralInfluencer: referralInfluencer ?? this.referralInfluencer,
+      paywallPassed: paywallPassed ?? this.paywallPassed,
       isComplete: isComplete ?? this.isComplete,
     );
   }
@@ -62,6 +66,10 @@ class OnboardingState {
 
 /// Total number of onboarding screens
 const int totalOnboardingSteps = 17;
+
+/// Index of the hard paywall in the onboarding PageView. The user CANNOT
+/// advance past this step until they've actually purchased/restored.
+const int paywallStepIndex = 15;
 
 /// Onboarding provider to manage onboarding flow state
 @riverpod
@@ -86,12 +94,24 @@ class Onboarding extends _$Onboarding {
     return false;
   }
 
-  /// Go to next step (debounced against double-taps)
+  /// Go to next step (debounced against double-taps).
+  /// HARD GATE: cannot advance past the paywall without purchasing —
+  /// this makes the paywall unskippable even if a tap slips past the
+  /// debounce or any other navigation fires unexpectedly.
   void nextStep() {
     if (_navLocked) return;
+    if (state.currentStep == paywallStepIndex && !state.paywallPassed) {
+      return;
+    }
     if (state.currentStep < totalOnboardingSteps - 1) {
       state = state.copyWith(currentStep: state.currentStep + 1);
     }
+  }
+
+  /// Called by the paywall ONLY after a verified purchase/restore.
+  /// Unlocks the gate so the user can proceed to account creation.
+  void markPaywallPassed() {
+    state = state.copyWith(paywallPassed: true);
   }
 
   /// Go to previous step (debounced against double-taps)

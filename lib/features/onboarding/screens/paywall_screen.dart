@@ -115,6 +115,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           customerInfo.entitlements.active
               .containsKey(RevenueCatService.premiumEntitlement)) {
         if (mounted) {
+          ref.read(onboardingProvider.notifier).markPaywallPassed();
           ref.read(onboardingProvider.notifier).nextStep();
         }
       }
@@ -164,6 +165,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               backgroundColor: Colors.green,
             ),
           );
+          ref.read(onboardingProvider.notifier).markPaywallPassed();
           ref.read(onboardingProvider.notifier).nextStep();
         }
       } else {

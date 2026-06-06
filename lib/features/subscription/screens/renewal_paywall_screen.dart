@@ -214,10 +214,10 @@ class _RenewalPaywallScreenState extends ConsumerState<RenewalPaywallScreen> {
 
                     // Headline
                     Text(
-                      'Renew Your Subscription',
+                      'Unlock Deenified',
                       style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                            color: AppColors.metallicGold,
-                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w900,
                           ),
                       textAlign: TextAlign.center,
                     ),
@@ -225,7 +225,7 @@ class _RenewalPaywallScreenState extends ConsumerState<RenewalPaywallScreen> {
                     const SizedBox(height: AppSpacing.md),
 
                     Text(
-                      'Your subscription has expired. Renew to continue your journey.',
+                      'Subscribe to continue your journey through the Qur\'an.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppColors.textSecondary,
                             height: 1.5,
