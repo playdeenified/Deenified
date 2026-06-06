@@ -26,30 +26,41 @@ import 'plan_reveal_screen.dart';
 import 'paywall_screen.dart';
 import 'signup_form_screen.dart';
 
-class OnboardingFlowScreen extends ConsumerStatefulWidget {
+/// Onboarding flow.
+///
+/// Renders ONLY the current step (not a PageView that keeps every screen
+/// alive). This is deliberate: with a PageView, the LoadingScreen's timer
+/// kept running in the background and animateToPage could desync from the
+/// real step — causing duplicate screens, stuck transitions, and skips.
+/// Here each screen is mounted only while it is the current step and is
+/// disposed the moment we move on, so none of that can happen.
+class OnboardingFlowScreen extends ConsumerWidget {
   const OnboardingFlowScreen({super.key});
 
-  @override
-  ConsumerState<OnboardingFlowScreen> createState() =>
-      _OnboardingFlowScreenState();
-}
+  // The ordered list of step builders. Index == step number.
+  // Keep this in sync with the indices in onboarding_provider.dart
+  // (especially paywallStepIndex).
+  static const List<Widget> _steps = [
+    HeroScreen(), // 0
+    IdentityScreen(), // 1  user_type
+    MotivationScreen(), // 2  motivation
+    RelationshipScreen(), // 3  relationship_with_allah
+    FrictionScreen(), // 4  barriers[]
+    LearningStyleScreen(), // 5  learning_style
+    PracticeTimeScreen(), // 6  practice_time
+    CommitmentScreen(), // 7  commitment_level
+    ReferralSourceScreen(), // 8  referral_source (randomized)
+    ReferralInfluencerScreen(), // 9  referral_influencer
+    SocialProofScreen(), // 10 testimonials, 4.9
+    LoadingScreen(stepIndex: 11), // 11 "Building your plan..."
+    PlanCompleteScreen(), // 12 celebration
+    RatingsScreen(), // 13 in-app rating
+    PlanRevealScreen(), // 14 reflects their answers
+    PaywallScreen(), // 15 HARD paywall
+    SignupFormScreen(), // 16 account creation
+  ];
 
-class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _handleBack() {
+  void _handleBack(WidgetRef ref, BuildContext context) {
     final currentStep = ref.read(onboardingProvider).currentStep;
     if (currentStep == 0) {
       context.go(AppRoutes.login);
@@ -59,26 +70,20 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final onboardingState = ref.watch(onboardingProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(onboardingProvider);
+    final step = state.currentStep.clamp(0, _steps.length - 1);
 
-    // Sync page controller with state
+    // When signup finishes, leave onboarding for home.
     ref.listen(onboardingProvider, (previous, next) {
-      if (previous?.currentStep != next.currentStep) {
-        _pageController.animateToPage(
-          next.currentStep,
-          duration: const Duration(milliseconds: 450),
-          curve: Curves.easeOutCubic,
-        );
-      }
-
       if (next.isComplete) {
         context.go(AppRoutes.home);
       }
     });
 
-    // Screens where we hide the progress bar (paywall + signup form)
-    final hideProgressBar = onboardingState.currentStep >= 15;
+    // Paywall + signup get the full-bleed dark surface; everything else
+    // sits on the rounded white card with the progress bar on top.
+    final hideProgressBar = step >= 15;
 
     return Scaffold(
       backgroundColor: AppColors.richBlack,
@@ -86,7 +91,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         bottom: false,
         child: Column(
           children: [
-            // Top bar with back button + progress
             if (!hideProgressBar)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -98,7 +102,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: _handleBack,
+                      onTap: () => _handleBack(ref, context),
                       child: Container(
                         width: 40,
                         height: 40,
@@ -119,10 +123,9 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadius.full),
                         child: LinearProgressIndicator(
-                          value: (onboardingState.currentStep + 1) /
-                              totalOnboardingSteps,
-                          backgroundColor: AppColors.metallicGold
-                              .withValues(alpha: 0.18),
+                          value: (step + 1) / totalOnboardingSteps,
+                          backgroundColor:
+                              AppColors.metallicGold.withValues(alpha: 0.18),
                           color: AppColors.metallicGold,
                           minHeight: 6,
                         ),
@@ -132,7 +135,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 ),
               ),
 
-            // White surface that hosts each onboarding screen.
             Expanded(
               child: Container(
                 margin: EdgeInsets.fromLTRB(
@@ -168,35 +170,17 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                           topLeft: Radius.circular(32),
                           topRight: Radius.circular(32),
                         ),
-                  child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(), // Disable swipe
-                children: const [
-                  // Hook
-                  HeroScreen(), // 0 — merged Mission + Our Mission
-
-                  // Profile questions (all write to OnboardingState -> Supabase)
-                  IdentityScreen(), // 1  user_type
-                  MotivationScreen(), // 2  motivation
-                  RelationshipScreen(), // 3  relationship_with_allah
-                  FrictionScreen(), // 4  barriers[]
-                  LearningStyleScreen(), // 5  learning_style
-                  PracticeTimeScreen(), // 6  practice_time
-                  CommitmentScreen(), // 7  commitment_level
-                  ReferralSourceScreen(), // 8  referral_source (randomized)
-                  ReferralInfluencerScreen(), // 9  referral_influencer
-
-                  // Trust + plan build
-                  SocialProofScreen(), // 10  testimonials, 4.9
-                  LoadingScreen(stepIndex: 11), // 11  "Building your plan..."
-                  PlanCompleteScreen(), // 12  celebration
-                  RatingsScreen(), // 13  in-app rating
-                  PlanRevealScreen(), // 14  reflects their answers
-
-                  // Close
-                  PaywallScreen(), // 15 — HARD paywall
-                  SignupFormScreen(), // 16 — Account creation
-                ],
+                  // Only the current step is mounted. A fade keyed by step
+                  // gives a smooth transition without any background timers
+                  // or page-controller desync.
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 320),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    child: KeyedSubtree(
+                      key: ValueKey<int>(step),
+                      child: _steps[step],
+                    ),
                   ),
                 ),
               ),
