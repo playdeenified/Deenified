@@ -358,6 +358,29 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     ],
                   ),
 
+                  // DEBUG-ONLY: skip the paywall while testing. kDebugMode is
+                  // false in release builds, so this entire button is compiled
+                  // out — real App Store users can NEVER reach it.
+                  if (kDebugMode) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    TextButton(
+                      onPressed: () {
+                        ref
+                            .read(onboardingProvider.notifier)
+                            .markPaywallPassed();
+                        ref.read(onboardingProvider.notifier).nextStep();
+                      },
+                      child: const Text(
+                        '⚠️ DEV: skip paywall',
+                        style: TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: AppSpacing.sm),
                 ],
               ),
