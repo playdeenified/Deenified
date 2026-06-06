@@ -77,13 +77,16 @@ class SupabaseService {
 
     if (response != null) return response;
 
-    // Create new profile
-    await client.from('users').insert({
-      'id': userId,
-      'email': currentUser!.email,
-    });
+    // No row yet. The handle_new_user trigger normally creates it, but if we
+    // got here first, upsert (ignoreDuplicates) avoids a primary-key conflict
+    // race, and maybeSingle() won't throw if the row still isn't visible.
+    await client.from('users').upsert(
+      {'id': userId, 'email': currentUser!.email},
+      onConflict: 'id',
+      ignoreDuplicates: true,
+    );
 
-    return await client.from('users').select().eq('id', userId).single();
+    return await client.from('users').select().eq('id', userId).maybeSingle();
   }
 
   /// Update user profile
@@ -136,7 +139,8 @@ class SupabaseService {
         'p_limit': 12,
       },
     );
-    return List<Map<String, dynamic>>.from(result as List);
+    // Guard against a null RPC return (never crash the quiz loader).
+    return List<Map<String, dynamic>>.from((result as List?) ?? const []);
   }
 
   /// Get practice questions by category (quran, seerah, prophets, etc.).
@@ -162,7 +166,8 @@ class SupabaseService {
         'p_limit': 15,
       },
     );
-    return List<Map<String, dynamic>>.from(result as List);
+    // Guard against a null RPC return (never crash the quiz loader).
+    return List<Map<String, dynamic>>.from((result as List?) ?? const []);
   }
 
   /// Record that the user answered a question (correct or not).
@@ -198,6 +203,9 @@ class SupabaseService {
   /// Get questions by their IDs (for daily challenges)
   Future<List<Map<String, dynamic>>> getQuestionsByIds(
       List<String> questionIds) async {
+    // PostgREST .inFilter('id', []) returns the WHOLE table — short-circuit
+    // an empty list so a malformed daily challenge can't dump every question.
+    if (questionIds.isEmpty) return const [];
     return await client
         .from('quiz_questions')
         .select()

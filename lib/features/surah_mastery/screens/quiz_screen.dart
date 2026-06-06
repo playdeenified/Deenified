@@ -62,9 +62,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           });
           return;
         }
-        final questionIds = (challenge['question_ids'] as List<dynamic>)
-            .map((e) => e.toString())
-            .toList();
+        final questionIds = (challenge['question_ids'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const <String>[];
         rawQuestions =
             await SupabaseService.instance.getQuestionsByIds(questionIds);
       } else {

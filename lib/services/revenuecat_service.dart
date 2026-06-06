@@ -149,31 +149,45 @@ class RevenueCatService {
     Purchases.addCustomerInfoUpdateListener(listener);
   }
 
-  /// Sync RevenueCat subscription status to Supabase
+  /// Sync RevenueCat subscription status to Supabase.
+  ///
+  /// IMPORTANT: we only ever write 'expired' when we have an AUTHORITATIVE
+  /// negative — i.e. the premium entitlement exists in customerInfo but is
+  /// no longer active. If the entitlement is simply ABSENT (which happens on
+  /// cold start before RevenueCat has synced from the network, on a blip, or
+  /// in sandbox latency), we leave Supabase untouched. Blindly writing
+  /// 'expired' there would wrongly downgrade a paying customer.
   Future<void> syncSubscriptionToSupabase(CustomerInfo customerInfo) async {
     try {
-      final premium = customerInfo.entitlements.active[premiumEntitlement];
+      final active = customerInfo.entitlements.active[premiumEntitlement];
+      final known = customerInfo.entitlements.all[premiumEntitlement];
 
-      if (premium != null && premium.isActive) {
-        // User has active premium
+      if (active != null && active.isActive) {
+        // Authoritative positive — active premium.
         await SupabaseService.instance.updateSubscriptionStatus(
           status: 'premium',
-          expiresAt: premium.expirationDate != null
-              ? DateTime.parse(premium.expirationDate!)
+          expiresAt: active.expirationDate != null
+              ? DateTime.parse(active.expirationDate!)
               : null,
         );
         developer.log(
-          'Synced to Supabase: premium, expires=${premium.expirationDate}',
+          'Synced to Supabase: premium, expires=${active.expirationDate}',
           name: 'RevenueCat',
         );
-      } else {
-        // No active premium — mark as expired
+      } else if (known != null) {
+        // Authoritative negative — entitlement exists but is not active
+        // (genuinely lapsed/expired). Safe to downgrade.
         await SupabaseService.instance.updateSubscriptionStatus(
           status: 'expired',
           expiresAt: null,
         );
+        developer.log('Synced to Supabase: expired (lapsed)',
+            name: 'RevenueCat');
+      } else {
+        // Unknown — no entitlement info yet. Do NOT touch Supabase so we
+        // never downgrade a paying user during an unsynced cold start.
         developer.log(
-          'Synced to Supabase: expired',
+          'Skipped Supabase sync: entitlement state unknown (not downgrading)',
           name: 'RevenueCat',
         );
       }
