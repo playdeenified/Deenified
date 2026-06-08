@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .env
+
+# Secrets / local MCP config — never commit
+mcp.txt

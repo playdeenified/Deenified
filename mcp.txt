@@ -1,4 +1,0 @@
-supabase mcp: sbp_a9e1207b89f4ebe30cabe42349bfaeffe7ba187a
-github mcp: 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
-context7: ctx7sk-39bdf040-0871-4a1d-ac3b-f184aff278d2
-revenuecat: sk_YuGwUyFbRyLKFOvPFPPTHKxQzRjYu
