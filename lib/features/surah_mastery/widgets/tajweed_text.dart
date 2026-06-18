@@ -27,6 +27,9 @@ class TajweedColors {
     switch (cls) {
       case 'ghunnah':
         return ghunnah;
+      case 'laam_shamsiyah':
+        // Silent laam before sun letters — visually grouped with ham_wasl.
+        return hamzaWasl;
       case 'qalaqah':
       case 'qalqala':
       case 'qalqalah':
@@ -84,45 +87,72 @@ class TajweedTextSpan {
   TajweedTextSpan._();
 
   /// Build inline spans for a single tajweed-marked Arabic chunk.
+  ///
+  /// Handles Quran.com's two tag conventions:
+  ///   - Verse-level field uses `<tajweed class=foo>...</tajweed>`
+  ///   - Word-level field uses `<rule class=foo>...</rule>`
+  ///
+  /// In both cases the class value is *unquoted*. Verse-end glyph spans
+  /// (`<span class=end>١</span>`) are stripped — we already render the verse
+  /// number badge separately.
   static List<InlineSpan> build(
     String tajweedMarkup, {
     required TextStyle baseStyle,
     required bool enabled,
   }) {
     if (!enabled) {
-      return [TextSpan(text: tajweedMarkup, style: baseStyle)];
+      return [TextSpan(text: _stripAllTags(tajweedMarkup), style: baseStyle)];
     }
+    // Drop verse-end markers before parsing.
+    final cleaned = tajweedMarkup.replaceAll(
+      RegExp(r'<span\s+class\s*=\s*"?end"?\s*>[^<]*</span>',
+          caseSensitive: false),
+      '',
+    );
+
     final spans = <InlineSpan>[];
-    // <tajweed class="...">inner</tajweed> — case-insensitive
+    // Match either <tajweed class=foo>...</tajweed> or <rule class=foo>...</rule>.
+    // Class value can be bare, single-quoted, or double-quoted.
     final pattern = RegExp(
-      r'<tajweed\s+class="([^"]+)">([^<]*)<\/tajweed>',
+      '<(tajweed|rule)\\s+class\\s*=\\s*["\']?([^"\'>\\s]+)["\']?\\s*>'
+      '([^<]*)'
+      '</\\1>',
       caseSensitive: false,
     );
     int cursor = 0;
-    for (final match in pattern.allMatches(tajweedMarkup)) {
+    for (final match in pattern.allMatches(cleaned)) {
       if (match.start > cursor) {
         spans.add(TextSpan(
-          text: tajweedMarkup.substring(cursor, match.start),
+          text: cleaned.substring(cursor, match.start),
           style: baseStyle,
         ));
       }
-      final cls = match.group(1) ?? '';
-      final inner = match.group(2) ?? '';
+      final cls = (match.group(2) ?? '').toLowerCase();
+      final inner = match.group(3) ?? '';
       final color = TajweedColors.forClass(cls);
       spans.add(TextSpan(
         text: inner,
-        style: color != null
-            ? baseStyle.copyWith(color: color)
-            : baseStyle,
+        style: color != null ? baseStyle.copyWith(color: color) : baseStyle,
       ));
       cursor = match.end;
     }
-    if (cursor < tajweedMarkup.length) {
+    if (cursor < cleaned.length) {
       spans.add(TextSpan(
-        text: tajweedMarkup.substring(cursor),
+        text: cleaned.substring(cursor),
         style: baseStyle,
       ));
     }
     return spans;
+  }
+
+  /// Best-effort strip of any tag wrappers, so disabled-tajweed mode never
+  /// shows raw markup like `<rule class=...>` to the user.
+  static String _stripAllTags(String s) {
+    return s
+        .replaceAll(
+          RegExp(r'<\/?(tajweed|rule|span)[^>]*>', caseSensitive: false),
+          '',
+        )
+        .trim();
   }
 }

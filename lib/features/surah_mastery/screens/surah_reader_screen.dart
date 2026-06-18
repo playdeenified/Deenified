@@ -195,11 +195,6 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     }
   }
 
-  Future<void> _onTajweedToggle() async {
-    HapticFeedback.lightImpact();
-    await SurahSettingsService.instance.toggleTajweed();
-  }
-
   Future<void> _onSettingsTap() async {
     HapticFeedback.lightImpact();
     await showSurahSettingsSheet(context);
@@ -517,12 +512,11 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
           if (widget.surahId != 1)
-            const Text(
+            Text(
               'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
-              style: TextStyle(
-                fontFamily: 'Amiri',
-                fontSize: 28,
+              style: SurahSettingsService.instance.arabicTextStyle(
                 color: AppColors.metallicGold,
+                fontSize: 28,
                 height: 2.0,
               ),
               textAlign: TextAlign.center,
@@ -673,16 +667,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   _VerseActionButton(
-                    icon: Icons.palette_rounded,
-                    tooltip: tajweedOn
-                        ? 'Turn off Tajweed coloring'
-                        : 'Turn on Tajweed coloring',
-                    active: tajweedOn,
-                    onTap: _onTajweedToggle,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  _VerseActionButton(
-                    icon: Icons.tune_rounded,
+                    icon: Icons.settings_rounded,
                     tooltip: 'Reader settings',
                     onTap: _onSettingsTap,
                   ),
@@ -862,11 +847,9 @@ class _ArabicVerseText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = TextStyle(
-      fontFamily: 'Amiri',
-      fontSize: fontSize,
+    final baseStyle = SurahSettingsService.instance.arabicTextStyle(
       color: AppColors.textPrimary,
-      height: 2.2,
+      fontSize: fontSize,
     );
 
     final words = verse.words;
@@ -926,13 +909,11 @@ class _VerseActionButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
-  final bool active;
 
   const _VerseActionButton({
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    this.active = false,
   });
 
   @override
@@ -946,19 +927,11 @@ class _VerseActionButton extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.xs),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: active
-                ? AppColors.metallicGold.withValues(alpha: 0.28)
-                : AppColors.metallicGold.withValues(alpha: 0.12),
-            border: active
-                ? Border.all(
-                    color: AppColors.metallicGold,
-                    width: 1.5,
-                  )
-                : null,
+            color: AppColors.metallicGold.withValues(alpha: 0.12),
           ),
           child: Icon(
             icon,
-            color: active ? AppColors.metallicGold : AppColors.heroBlack,
+            color: AppColors.heroBlack,
             size: 22,
           ),
         ),
@@ -1416,8 +1389,8 @@ class _AppBarActionButton extends StatelessWidget {
           },
           customBorder: const CircleBorder(),
           child: Container(
-            width: 42,
-            height: 42,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: filled
@@ -1427,7 +1400,7 @@ class _AppBarActionButton extends StatelessWidget {
                   ? null
                   : Border.all(
                       color: AppColors.metallicGold.withValues(alpha: 0.5),
-                      width: 1,
+                      width: 1.5,
                     ),
               boxShadow: filled
                   ? [
@@ -1442,7 +1415,7 @@ class _AppBarActionButton extends StatelessWidget {
             child: Icon(
               icon,
               color: filled ? AppColors.heroBlack : AppColors.metallicGold,
-              size: 24,
+              size: 26,
             ),
           ),
         ),
