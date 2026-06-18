@@ -63,7 +63,11 @@ class TajweedColors {
       case 'idgham_w_ghunnah':
       case 'idgham_chunnah':
       case 'idgham_ghunnah':
+      // Quran.com actually returns the Y-form (…sayn / …bayn), not the
+      // AI-form. Keep both spellings for safety.
+      case 'idgham_mutajanisayn':
       case 'idgham_mutajanisain':
+      case 'idgham_mutaqaribayn':
       case 'idgham_mutaqaribain':
         return idghamWithGhunnah;
       case 'idgham_wo_ghunnah':
@@ -153,6 +157,28 @@ class TajweedTextSpan {
     caseSensitive: false,
   );
 
+  /// The five Qalqalah letters (mnemonic: قطب جد). Used as a defensive
+  /// guard: even if upstream ever mis-tags a non-qalqalah letter with the
+  /// qalqalah class, we refuse to color it.
+  static const _qalqalahLetters = {'ق', 'ط', 'ب', 'ج', 'د'};
+  static final RegExp _arabicLetterPattern = RegExp(r'[ء-ي]');
+
+  /// Returns false if [cls] is a qalqalah class but the inner [text]
+  /// contains any base Arabic letter that isn't one of قطبجد. Other rules
+  /// pass through unchanged.
+  static bool _passesRuleGuard(String cls, String text) {
+    final lower = cls.toLowerCase();
+    final isQalqalah =
+        lower == 'qalqalah' || lower == 'qalaqah' || lower == 'qalqala';
+    if (!isQalqalah) return true;
+    final letters = _arabicLetterPattern.allMatches(text).map((m) => m.group(0));
+    for (final l in letters) {
+      if (l == null) continue;
+      if (!_qalqalahLetters.contains(l)) return false;
+    }
+    return true;
+  }
+
   static List<InlineSpan> build(
     String markup, {
     required TextStyle baseStyle,
@@ -177,10 +203,10 @@ class TajweedTextSpan {
       final cls = match.group(2) ?? '';
       final inner = match.group(3) ?? '';
       final color = TajweedColors.forClass(cls);
+      final coloredOk = color != null && _passesRuleGuard(cls, inner);
       spans.add(TextSpan(
         text: inner,
-        style:
-            color != null ? baseStyle.copyWith(color: color) : baseStyle,
+        style: coloredOk ? baseStyle.copyWith(color: color) : baseStyle,
       ));
       cursor = match.end;
     }
