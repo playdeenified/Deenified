@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../services/quran_api_service.dart';
+import '../../../services/quran_audio_service.dart';
+import '../widgets/reciter_picker_sheet.dart';
 
 /// Full Surah reading screen with Arabic text, translation,
-/// and expandable word-by-word breakdowns.
+/// expandable word-by-word breakdowns, and reciter audio playback.
 class SurahReaderScreen extends StatefulWidget {
   final int surahId;
   final String surahName;
@@ -22,11 +26,121 @@ class SurahReaderScreen extends StatefulWidget {
 class _SurahReaderScreenState extends State<SurahReaderScreen> {
   late Future<List<QuranVerse>> _versesFuture;
   final Set<int> _expandedVerses = {};
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _verseKeys = {};
+
+  // Last verse we auto-scrolled to (so we don't re-scroll on every stream tick)
+  int? _lastAutoScrolledVerse;
+  // Stash the loaded reciter id for sub-title display
+  String? _selectedReciterName;
 
   @override
   void initState() {
     super.initState();
     _versesFuture = QuranApiService.instance.getVersesByChapter(widget.surahId);
+    _refreshSelectedReciterName();
+  }
+
+  Future<void> _refreshSelectedReciterName() async {
+    try {
+      final id = await QuranAudioService.instance.getSelectedReciterId();
+      final reciters = await QuranApiService.instance.getReciters();
+      final match = reciters.firstWhere(
+        (r) => r.id == id,
+        orElse: () => Reciter(id: id, reciterName: 'Reciter $id'),
+      );
+      if (mounted) setState(() => _selectedReciterName = match.reciterName);
+    } catch (_) {
+      // Best-effort — fine if it fails (e.g. offline)
+    }
+  }
+
+  @override
+  void dispose() {
+    // Stop playback so audio doesn't keep playing in the background.
+    QuranAudioService.instance.stop();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openReciterPicker() async {
+    final pickedId = await showReciterPickerSheet(context);
+    if (pickedId != null) {
+      await _refreshSelectedReciterName();
+    }
+  }
+
+  Future<void> _playWholeSurah() async {
+    HapticFeedback.lightImpact();
+    try {
+      await QuranAudioService.instance.playSurah(widget.surahId);
+    } catch (e) {
+      _showAudioError();
+    }
+  }
+
+  Future<void> _playOneVerse(int verseIndex) async {
+    HapticFeedback.lightImpact();
+    try {
+      await QuranAudioService.instance
+          .playOneVerse(widget.surahId, verseIndex);
+    } catch (_) {
+      _showAudioError();
+    }
+  }
+
+  Future<void> _playFromVerse(int verseIndex) async {
+    HapticFeedback.lightImpact();
+    try {
+      await QuranAudioService.instance
+          .playFromVerse(widget.surahId, verseIndex);
+    } catch (_) {
+      _showAudioError();
+    }
+  }
+
+  Future<void> _showRepeatSheet(int verseIndex, int verseNumber) async {
+    HapticFeedback.mediumImpact();
+    final choice = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.deepCharcoal,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
+      builder: (_) => _RepeatOptionsSheet(verseNumber: verseNumber),
+    );
+    if (choice == null) return;
+    try {
+      await QuranAudioService.instance
+          .repeatVerse(widget.surahId, verseIndex, choice);
+    } catch (_) {
+      _showAudioError();
+    }
+  }
+
+  void _showAudioError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not load audio. Check your connection.'),
+        backgroundColor: AppColors.error,
+      ),
+    );
+  }
+
+  void _autoScrollToVerse(int verseNumber) {
+    if (_lastAutoScrolledVerse == verseNumber) return;
+    _lastAutoScrolledVerse = verseNumber;
+    final key = _verseKeys[verseNumber];
+    final ctx = key?.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOut,
+      alignment: 0.2, // pin near the top-third
+    );
   }
 
   @override
@@ -59,6 +173,26 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Choose Reciter',
+            icon: const Icon(
+              Icons.headphones_rounded,
+              color: AppColors.metallicGold,
+            ),
+            onPressed: _openReciterPicker,
+          ),
+          IconButton(
+            tooltip: 'Play whole Surah',
+            icon: const Icon(
+              Icons.play_circle_fill_rounded,
+              color: AppColors.metallicGold,
+              size: 28,
+            ),
+            onPressed: _playWholeSurah,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+        ],
       ),
       body: FutureBuilder<List<QuranVerse>>(
         future: _versesFuture,
@@ -131,32 +265,87 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           }
 
           final verses = snapshot.data!;
-          return _buildVerseList(context, verses);
+          return StreamBuilder<int?>(
+            stream: QuranAudioService.instance.player.currentIndexStream,
+            builder: (context, idxSnap) {
+              final activeIndex = idxSnap.data;
+              // currentSurahId might be null until first playback
+              final svcSurah = QuranAudioService.instance.currentSurahId;
+              final activeVerseNum = (svcSurah == widget.surahId &&
+                      activeIndex != null)
+                  ? QuranAudioService.instance.verseNumberForIndex(activeIndex)
+                  : null;
+
+              // Auto-scroll on verse change (after the current frame settles).
+              if (activeVerseNum != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _autoScrollToVerse(activeVerseNum);
+                });
+              }
+
+              return Stack(
+                children: [
+                  _buildVerseList(context, verses, activeVerseNum),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _PlaybackBar(
+                      surahId: widget.surahId,
+                      reciterName: _selectedReciterName,
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
         },
       ),
     );
   }
 
-  Widget _buildVerseList(BuildContext context, List<QuranVerse> verses) {
+  Widget _buildVerseList(
+    BuildContext context,
+    List<QuranVerse> verses,
+    int? activeVerseNumber,
+  ) {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        // Extra bottom padding so the floating playback bar doesn't cover
+        // the last verse when it's expanded.
+        120,
       ),
       itemCount: verses.length + 1, // +1 for Bismillah header
       itemBuilder: (context, index) {
-        // Bismillah header (skip for Al-Fatihah and At-Tawbah)
+        // Bismillah header (skip for At-Tawbah; Al-Fatihah handled inside)
         if (index == 0) {
           if (widget.surahId == 9) {
-            return const SizedBox.shrink(); // At-Tawbah has no Bismillah
+            return const SizedBox.shrink();
           }
           return _buildBismillahHeader(context);
         }
 
         final verse = verses[index - 1];
+        final verseIndex = index - 1;
         final isExpanded = _expandedVerses.contains(verse.verseNumber);
+        final isActive = activeVerseNumber == verse.verseNumber;
 
-        return _buildVerseCard(context, verse, isExpanded);
+        final key = _verseKeys.putIfAbsent(verse.verseNumber, () => GlobalKey());
+
+        return Container(
+          key: key,
+          child: _buildVerseCard(
+            context,
+            verse,
+            verseIndex,
+            isExpanded,
+            isActive,
+          ),
+        );
       },
     );
   }
@@ -209,7 +398,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           const SizedBox(height: AppSpacing.lg),
           // Bismillah text (only show for surahs that aren't Al-Fatihah)
           if (widget.surahId != 1)
-            Text(
+            const Text(
               'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
               style: TextStyle(
                 fontFamily: 'Amiri',
@@ -280,23 +469,40 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   Widget _buildVerseCard(
     BuildContext context,
     QuranVerse verse,
+    int verseIndex,
     bool isExpanded,
+    bool isActive,
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
         decoration: BoxDecoration(
-          color: AppColors.deepCharcoal,
+          color: isActive
+              ? AppColors.metallicGold.withValues(alpha: 0.06)
+              : AppColors.deepCharcoal,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: AppColors.glassBorder,
-            width: 0.5,
+            color: isActive
+                ? AppColors.metallicGold
+                : AppColors.glassBorder,
+            width: isActive ? 1.5 : 0.5,
           ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: AppColors.metallicGold.withValues(alpha: 0.15),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Verse number badge
+            // Verse number + audio buttons row
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
@@ -333,12 +539,50 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: AppSpacing.sm),
                   Text(
                     verse.verseKey,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: AppColors.textTertiary,
                         ),
+                  ),
+                  const Spacer(),
+                  // Play one verse (tap) + repeat (long-press)
+                  Tooltip(
+                    message: 'Play this verse · long-press to repeat',
+                    child: InkWell(
+                      onTap: () => _playOneVerse(verseIndex),
+                      onLongPress: () =>
+                          _showRepeatSheet(verseIndex, verse.verseNumber),
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        child: Icon(
+                          Icons.play_arrow_rounded,
+                          color: isActive
+                              ? AppColors.metallicGold
+                              : AppColors.heroBlack,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  // Play from this verse onward
+                  Tooltip(
+                    message: 'Play from here',
+                    child: InkWell(
+                      onTap: () => _playFromVerse(verseIndex),
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      child: const Padding(
+                        padding: EdgeInsets.all(AppSpacing.xs),
+                        child: Icon(
+                          Icons.playlist_play_rounded,
+                          color: AppColors.heroBlack,
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -498,4 +742,295 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   String _cleanTranslation(String text) {
     return text.replaceAll(RegExp(r'<[^>]*>'), '');
   }
+}
+
+/// Bottom-of-screen mini player. Only visible when audio is loaded for this
+/// surah. Shows reciter + current verse + play/pause + close.
+class _PlaybackBar extends StatelessWidget {
+  final int surahId;
+  final String? reciterName;
+
+  const _PlaybackBar({required this.surahId, required this.reciterName});
+
+  @override
+  Widget build(BuildContext context) {
+    final svc = QuranAudioService.instance;
+    return StreamBuilder<PlayerState>(
+      stream: svc.player.playerStateStream,
+      builder: (context, snap) {
+        final state = snap.data;
+        final isThisSurah = svc.currentSurahId == surahId;
+        final processing = state?.processingState ?? ProcessingState.idle;
+        final hasAudio =
+            isThisSurah && processing != ProcessingState.idle;
+
+        if (!hasAudio) return const SizedBox.shrink();
+
+        final isPlaying = state?.playing ?? false;
+        final isLoading = processing == ProcessingState.loading ||
+            processing == ProcessingState.buffering;
+
+        return StreamBuilder<int?>(
+          stream: svc.player.currentIndexStream,
+          builder: (context, idxSnap) {
+            final idx = idxSnap.data;
+            final verseNum = (idx != null) ? svc.verseNumberForIndex(idx) : null;
+
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  0,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.deepCharcoal,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(
+                      color: AppColors.metallicGold.withValues(alpha: 0.4),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.metallicGold.withValues(alpha: 0.18),
+                        blurRadius: 24,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.metallicGold.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.graphic_eq_rounded,
+                          color: AppColors.metallicGold,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              reciterName ?? 'Reciter',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              verseNum != null
+                                  ? 'Verse $surahId:$verseNum'
+                                  : 'Surah $surahId',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.metallicGold,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Previous verse',
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          svc.player.seekToPrevious();
+                        },
+                        icon: const Icon(
+                          Icons.skip_previous_rounded,
+                          color: AppColors.heroBlack,
+                          size: 28,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          if (isPlaying) {
+                            svc.pause();
+                          } else {
+                            svc.resume();
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: const BoxDecoration(
+                            color: AppColors.metallicGold,
+                            shape: BoxShape.circle,
+                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.heroBlack,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : Icon(
+                                  isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  color: AppColors.heroBlack,
+                                  size: 26,
+                                ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Next verse',
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          svc.player.seekToNext();
+                        },
+                        icon: const Icon(
+                          Icons.skip_next_rounded,
+                          color: AppColors.heroBlack,
+                          size: 28,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Stop',
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          svc.stop();
+                        },
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: AppColors.textTertiary,
+                          size: 22,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Bottom sheet shown on long-press of a verse play button. Lets the user
+/// repeat that verse N times.
+class _RepeatOptionsSheet extends StatelessWidget {
+  final int verseNumber;
+  const _RepeatOptionsSheet({required this.verseNumber});
+
+  @override
+  Widget build(BuildContext context) {
+    // Pass -1 for infinite.
+    const options = <_RepeatOption>[
+      _RepeatOption(label: 'Repeat 2 times', value: 2),
+      _RepeatOption(label: 'Repeat 3 times', value: 3),
+      _RepeatOption(label: 'Repeat 5 times', value: 5),
+      _RepeatOption(label: 'Repeat 10 times', value: 10),
+      _RepeatOption(label: 'Repeat indefinitely', value: -1),
+    ];
+
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: AppSpacing.sm),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.textTertiary.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.repeat_rounded,
+                  color: AppColors.metallicGold,
+                  size: 22,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Repeat Verse $verseNumber',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.glassBorder),
+          ...options.map(
+            (o) => InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                Navigator.of(context).pop(o.value);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      o.value == -1
+                          ? Icons.all_inclusive_rounded
+                          : Icons.repeat_rounded,
+                      color: AppColors.metallicGold,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      o.label,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ),
+    );
+  }
+}
+
+class _RepeatOption {
+  final String label;
+  final int value;
+  const _RepeatOption({required this.label, required this.value});
 }

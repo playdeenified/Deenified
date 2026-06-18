@@ -61,6 +61,62 @@ class QuranWord {
   }
 }
 
+/// Model for a Quran reciter (from /resources/recitations)
+class Reciter {
+  final int id;
+  final String reciterName;
+  final String? style;
+  final String? translatedName;
+
+  Reciter({
+    required this.id,
+    required this.reciterName,
+    this.style,
+    this.translatedName,
+  });
+
+  factory Reciter.fromJson(Map<String, dynamic> json) {
+    final translated = json['translated_name'];
+    return Reciter(
+      id: json['id'] ?? 0,
+      reciterName: json['reciter_name'] ?? json['name'] ?? 'Unknown',
+      style: json['style'] as String?,
+      translatedName: translated is Map<String, dynamic>
+          ? translated['name'] as String?
+          : null,
+    );
+  }
+}
+
+/// One verse's audio file for a given reciter
+/// (from /recitations/{reciter_id}/by_chapter/{chapter_id})
+class VerseAudio {
+  final String verseKey;
+  final int verseNumber;
+  final String audioUrl;
+
+  VerseAudio({
+    required this.verseKey,
+    required this.verseNumber,
+    required this.audioUrl,
+  });
+
+  factory VerseAudio.fromJson(Map<String, dynamic> json) {
+    final key = json['verse_key'] as String? ?? '';
+    final parts = key.split(':');
+    final verseNum = parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0;
+    final raw = (json['url'] as String? ?? '').trim();
+    final url = raw.startsWith('http')
+        ? raw
+        : 'https://verses.quran.com/$raw';
+    return VerseAudio(
+      verseKey: key,
+      verseNumber: verseNum,
+      audioUrl: url,
+    );
+  }
+}
+
 /// Service for fetching Quran data from api.quran.com
 class QuranApiService {
   QuranApiService._();
@@ -70,6 +126,8 @@ class QuranApiService {
 
   /// Sahih International translation
   static const _translationId = 131;
+
+  List<Reciter>? _recitersCache;
 
   /// Fetch all verses for a given chapter/surah
   /// Returns parsed [QuranVerse] list
@@ -94,5 +152,39 @@ class QuranApiService {
         (data['verses'] as List).map((v) => QuranVerse.fromJson(v)).toList();
 
     return verses;
+  }
+
+  /// Fetch list of available reciters. Cached in memory after first call.
+  Future<List<Reciter>> getReciters() async {
+    if (_recitersCache != null) return _recitersCache!;
+    final url = Uri.parse('$_baseUrl/resources/recitations?language=en');
+    final response = await http.get(url);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load reciters: ${response.statusCode}');
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = (data['recitations'] as List)
+        .map((r) => Reciter.fromJson(r))
+        .toList();
+    _recitersCache = list;
+    return list;
+  }
+
+  /// Fetch per-verse audio URLs for a given reciter + surah
+  Future<List<VerseAudio>> getVerseAudios(int reciterId, int surahId) async {
+    final url = Uri.parse(
+      '$_baseUrl/recitations/$reciterId/by_chapter/$surahId',
+    );
+    final response = await http.get(url);
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load audio for $reciterId/$surahId: ${response.statusCode}',
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final files = (data['audio_files'] as List? ?? [])
+        .map((a) => VerseAudio.fromJson(a))
+        .toList();
+    return files;
   }
 }
