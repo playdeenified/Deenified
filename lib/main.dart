@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,6 +14,14 @@ import 'services/revenuecat_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Wire up lock-screen / notification audio controls so Quran recitation
+  // keeps playing when the screen sleeps or the user backgrounds the app.
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.deenified.audio.channel',
+    androidNotificationChannelName: 'Deenified Recitation',
+    androidNotificationOngoing: true,
+  );
 
   // Load environment variables
   await dotenv.load(fileName: '.env');

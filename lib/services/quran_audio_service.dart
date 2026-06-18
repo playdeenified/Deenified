@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'quran_api_service.dart';
@@ -29,6 +30,15 @@ class QuranAudioService {
 
   List<VerseAudio> _verses = [];
   List<VerseAudio> get verses => _verses;
+
+  String _currentReciterName = 'Reciter';
+  String _currentSurahName = 'Surah';
+
+  /// Optional surah display name set by the screen before playback so the
+  /// lock-screen notification can show "Al-Fatihah" instead of "Surah 1".
+  void setSurahDisplayName(String name) {
+    _currentSurahName = name;
+  }
 
   StreamSubscription<int?>? _stopAfterSub;
   StreamSubscription<PlayerState>? _repeatSub;
@@ -61,11 +71,35 @@ class QuranAudioService {
     _verses = await QuranApiService.instance.getVerseAudios(reciterId, surahId);
     _currentSurahId = surahId;
     _loadedForReciterId = reciterId;
+    await _refreshReciterName(reciterId);
     final sources = _verses
-        .map<AudioSource>((v) => AudioSource.uri(Uri.parse(v.audioUrl)))
+        .map<AudioSource>(
+          (v) => AudioSource.uri(
+            Uri.parse(v.audioUrl),
+            tag: MediaItem(
+              id: '${reciterId}_${v.verseKey}',
+              album: _currentSurahName,
+              title: 'Verse ${v.verseNumber}',
+              artist: _currentReciterName,
+            ),
+          ),
+        )
         .toList();
     await player.setAudioSources(sources);
     _queueLoaded = true;
+  }
+
+  Future<void> _refreshReciterName(int reciterId) async {
+    try {
+      final reciters = await QuranApiService.instance.getReciters();
+      final match = reciters.firstWhere(
+        (r) => r.id == reciterId,
+        orElse: () => Reciter(id: reciterId, reciterName: 'Reciter $reciterId'),
+      );
+      _currentReciterName = match.reciterName;
+    } catch (_) {
+      _currentReciterName = 'Reciter';
+    }
   }
 
   /// Load just the verse list (without setting up the queue) — used by
@@ -80,6 +114,7 @@ class QuranAudioService {
     _verses = await QuranApiService.instance.getVerseAudios(reciterId, surahId);
     _currentSurahId = surahId;
     _loadedForReciterId = reciterId;
+    await _refreshReciterName(reciterId);
   }
 
   /// Play the entire surah from verse 1.
@@ -102,18 +137,7 @@ class QuranAudioService {
 
   /// Play exactly one verse, then stop.
   Future<void> playOneVerse(int surahId, int verseIndex) async {
-    await _cancelExtras();
-    await _ensureQueueLoaded(surahId);
-    await player.setLoopMode(LoopMode.off);
-    await player.seek(Duration.zero, index: verseIndex);
-    _stopAfterSub = player.currentIndexStream.listen((idx) {
-      if (idx != null && idx != verseIndex) {
-        player.pause();
-        _stopAfterSub?.cancel();
-        _stopAfterSub = null;
-      }
-    });
-    await player.play();
+    await repeatVerse(surahId, verseIndex, 1);
   }
 
   /// Repeat a single verse [times] times. Pass -1 for infinite repeat.
@@ -122,13 +146,27 @@ class QuranAudioService {
     await _ensureVerseList(surahId);
     if (verseIndex < 0 || verseIndex >= _verses.length) return;
 
-    final url = _verses[verseIndex].audioUrl;
-    await player.setUrl(url);
+    final v = _verses[verseIndex];
+    final reciterId = _loadedForReciterId;
+    final source = AudioSource.uri(
+      Uri.parse(v.audioUrl),
+      tag: MediaItem(
+        id: '${reciterId}_${v.verseKey}_loop',
+        album: _currentSurahName,
+        title: times < 0
+            ? 'Verse ${v.verseNumber} · Loop'
+            : 'Verse ${v.verseNumber}',
+        artist: _currentReciterName,
+      ),
+    );
+    await player.setAudioSource(source);
     // We've switched to a single-source player; mark the queue as stale.
     _queueLoaded = false;
 
     if (times < 0) {
       await player.setLoopMode(LoopMode.one);
+    } else if (times == 1) {
+      await player.setLoopMode(LoopMode.off);
     } else {
       await player.setLoopMode(LoopMode.off);
       _repeatCount = 1;

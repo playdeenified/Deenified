@@ -31,6 +31,7 @@ class _ReciterPickerSheet extends StatefulWidget {
 class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
   late Future<List<Reciter>> _recitersFuture;
   int? _selectedId;
+  String _query = '';
 
   @override
   void initState() {
@@ -44,9 +45,33 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
     if (mounted) setState(() => _selectedId = id);
   }
 
+  /// Build a deterministic gold-ish color per reciter so the avatars feel
+  /// individual but stay on-brand.
+  Color _avatarColor(int id) {
+    final hue = (id * 37) % 360;
+    return HSLColor.fromAHSL(1.0, hue.toDouble(), 0.5, 0.55).toColor();
+  }
+
+  String _initials(String name) {
+    final cleaned = name.replaceAll(RegExp(r"[`'\.]"), '').trim();
+    final parts = cleaned.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+  }
+
+  List<Reciter> _filtered(List<Reciter> all) {
+    if (_query.trim().isEmpty) return all;
+    final q = _query.toLowerCase();
+    return all.where((r) {
+      return r.reciterName.toLowerCase().contains(q) ||
+          (r.style ?? '').toLowerCase().contains(q);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.of(context).size.height * 0.8;
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -55,7 +80,6 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Grab handle
             Container(
               margin: const EdgeInsets.only(top: AppSpacing.sm),
               width: 40,
@@ -70,23 +94,103 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                 AppSpacing.lg,
                 AppSpacing.lg,
                 AppSpacing.lg,
-                AppSpacing.md,
+                AppSpacing.sm,
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.headphones_rounded,
-                    color: AppColors.metallicGold,
-                    size: 22,
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.metallicGold.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.record_voice_over_rounded,
+                      color: AppColors.metallicGold,
+                      size: 22,
+                    ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Choose Reciter',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Choose Reciter',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
+                        FutureBuilder<List<Reciter>>(
+                          future: _recitersFuture,
+                          builder: (context, snap) {
+                            final n = snap.data?.length;
+                            return Text(
+                              n != null
+                                  ? '$n reciters from Quran.com'
+                                  : 'Loading reciters…',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.textTertiary,
+                                  ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              child: TextField(
+                onChanged: (v) => setState(() => _query = v),
+                decoration: InputDecoration(
+                  hintText: 'Search reciter…',
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: AppColors.textTertiary,
+                    size: 20,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.richBlack,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: const BorderSide(
+                      color: AppColors.glassBorder,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: const BorderSide(
+                      color: AppColors.glassBorder,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: const BorderSide(
+                      color: AppColors.metallicGold,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+                style: const TextStyle(color: AppColors.textPrimary),
               ),
             ),
             const Divider(height: 1, color: AppColors.glassBorder),
@@ -108,14 +212,26 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                         child: Text(
                           'Could not load reciters.\nCheck your internet and try again.',
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: AppColors.textSecondary),
                         ),
                       ),
                     );
                   }
-                  final reciters = snap.data ?? [];
+                  final all = snap.data ?? [];
+                  final reciters = _filtered(all);
+                  if (reciters.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No reciters match "$_query".',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                      ),
+                    );
+                  }
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(
                       vertical: AppSpacing.sm,
@@ -124,12 +240,13 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                     separatorBuilder: (_, __) => Divider(
                       height: 1,
                       color: AppColors.glassBorder.withValues(alpha: 0.5),
-                      indent: AppSpacing.lg,
+                      indent: AppSpacing.lg + 56,
                       endIndent: AppSpacing.lg,
                     ),
                     itemBuilder: (context, i) {
                       final r = reciters[i];
                       final isSelected = r.id == _selectedId;
+                      final color = _avatarColor(r.id);
                       return InkWell(
                         onTap: () async {
                           HapticFeedback.selectionClick();
@@ -139,35 +256,53 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                             Navigator.of(context).pop(r.id);
                           }
                         },
-                        child: Padding(
+                        child: Container(
+                          color: isSelected
+                              ? AppColors.metallicGold.withValues(alpha: 0.06)
+                              : Colors.transparent,
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.lg,
                             vertical: AppSpacing.md,
                           ),
                           child: Row(
                             children: [
+                              // Initials avatar in a deterministic color
                               Container(
-                                width: 40,
-                                height: 40,
+                                width: 48,
+                                height: 48,
                                 decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      color,
+                                      color.withValues(alpha: 0.75),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
                                   shape: BoxShape.circle,
-                                  color: isSelected
-                                      ? AppColors.metallicGold
-                                          .withValues(alpha: 0.15)
-                                      : AppColors.richBlack,
                                   border: Border.all(
                                     color: isSelected
                                         ? AppColors.metallicGold
-                                        : AppColors.glassBorder,
-                                    width: isSelected ? 1.5 : 0.5,
+                                        : Colors.transparent,
+                                    width: 2,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color.withValues(alpha: 0.25),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                child: Icon(
-                                  Icons.person_rounded,
-                                  size: 20,
-                                  color: isSelected
-                                      ? AppColors.metallicGold
-                                      : AppColors.textTertiary,
+                                child: Center(
+                                  child: Text(
+                                    _initials(r.reciterName),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.md),
@@ -181,26 +316,35 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                                           .textTheme
                                           .bodyLarge
                                           ?.copyWith(
-                                            color: isSelected
-                                                ? AppColors.metallicGold
-                                                : AppColors.textPrimary,
+                                            color: AppColors.textPrimary,
                                             fontWeight: isSelected
                                                 ? FontWeight.w700
-                                                : FontWeight.w500,
+                                                : FontWeight.w600,
                                           ),
                                     ),
                                     if (r.style != null &&
                                         r.style!.isNotEmpty)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 2),
-                                        child: Text(
-                                          r.style!,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: AppColors.textTertiary,
-                                              ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.sm,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.metallicGold
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            r.style!,
+                                            style: const TextStyle(
+                                              color: AppColors.metallicGold,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                   ],
@@ -210,6 +354,12 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                                 const Icon(
                                   Icons.check_circle_rounded,
                                   color: AppColors.metallicGold,
+                                  size: 24,
+                                )
+                              else
+                                const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: AppColors.textTertiary,
                                   size: 22,
                                 ),
                             ],

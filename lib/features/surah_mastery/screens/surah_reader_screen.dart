@@ -38,6 +38,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   void initState() {
     super.initState();
     _versesFuture = QuranApiService.instance.getVersesByChapter(widget.surahId);
+    QuranAudioService.instance.setSurahDisplayName(widget.surahName);
     _refreshSelectedReciterName();
   }
 
@@ -57,8 +58,10 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   @override
   void dispose() {
-    // Stop playback so audio doesn't keep playing in the background.
-    QuranAudioService.instance.stop();
+    // Note: we intentionally do NOT stop playback here — the user has
+    // background audio enabled, so leaving this screen (or backgrounding
+    // the app) should not silence the recitation. They stop it from the
+    // playback bar or the lock-screen controls.
     _scrollController.dispose();
     super.dispose();
   }
@@ -79,11 +82,11 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     }
   }
 
-  Future<void> _playOneVerse(int verseIndex) async {
+  Future<void> _loopVerse(int verseIndex) async {
     HapticFeedback.lightImpact();
     try {
       await QuranAudioService.instance
-          .playOneVerse(widget.surahId, verseIndex);
+          .repeatVerse(widget.surahId, verseIndex, -1);
     } catch (_) {
       _showAudioError();
     }
@@ -174,24 +177,19 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           ],
         ),
         actions: [
-          IconButton(
+          _AppBarActionButton(
+            icon: Icons.record_voice_over_rounded,
             tooltip: 'Choose Reciter',
-            icon: const Icon(
-              Icons.headphones_rounded,
-              color: AppColors.metallicGold,
-            ),
-            onPressed: _openReciterPicker,
-          ),
-          IconButton(
-            tooltip: 'Play whole Surah',
-            icon: const Icon(
-              Icons.play_circle_fill_rounded,
-              color: AppColors.metallicGold,
-              size: 28,
-            ),
-            onPressed: _playWholeSurah,
+            onTap: _openReciterPicker,
           ),
           const SizedBox(width: AppSpacing.xs),
+          _AppBarActionButton(
+            icon: Icons.play_arrow_rounded,
+            tooltip: 'Listen to whole Surah',
+            filled: true,
+            onTap: _playWholeSurah,
+          ),
+          const SizedBox(width: AppSpacing.md),
         ],
       ),
       body: FutureBuilder<List<QuranVerse>>(
@@ -547,39 +545,47 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                         ),
                   ),
                   const Spacer(),
-                  // Play one verse (tap) + repeat (long-press)
+                  // Loop this verse (tap) — long-press for repeat count menu
                   Tooltip(
-                    message: 'Play this verse · long-press to repeat',
+                    message: 'Loop this verse · long-press for options',
                     child: InkWell(
-                      onTap: () => _playOneVerse(verseIndex),
+                      onTap: () => _loopVerse(verseIndex),
                       onLongPress: () =>
                           _showRepeatSheet(verseIndex, verse.verseNumber),
                       borderRadius: BorderRadius.circular(AppRadius.full),
-                      child: Padding(
+                      child: Container(
                         padding: const EdgeInsets.all(AppSpacing.xs),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.metallicGold.withValues(alpha: 0.12),
+                        ),
                         child: Icon(
-                          Icons.play_arrow_rounded,
+                          Icons.repeat_one_rounded,
                           color: isActive
                               ? AppColors.metallicGold
                               : AppColors.heroBlack,
-                          size: 24,
+                          size: 22,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 2),
-                  // Play from this verse onward
+                  const SizedBox(width: AppSpacing.xs),
+                  // Play from this verse and continue through end of surah
                   Tooltip(
-                    message: 'Play from here',
+                    message: 'Play from this verse to the end',
                     child: InkWell(
                       onTap: () => _playFromVerse(verseIndex),
                       borderRadius: BorderRadius.circular(AppRadius.full),
-                      child: const Padding(
-                        padding: EdgeInsets.all(AppSpacing.xs),
-                        child: Icon(
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.metallicGold.withValues(alpha: 0.12),
+                        ),
+                        child: const Icon(
                           Icons.playlist_play_rounded,
                           color: AppColors.heroBlack,
-                          size: 24,
+                          size: 22,
                         ),
                       ),
                     ),
@@ -941,9 +947,9 @@ class _RepeatOptionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Pass -1 for infinite.
+    // Pass 1 for "just once", -1 for infinite.
     const options = <_RepeatOption>[
-      _RepeatOption(label: 'Repeat 2 times', value: 2),
+      _RepeatOption(label: 'Play once', value: 1),
       _RepeatOption(label: 'Repeat 3 times', value: 3),
       _RepeatOption(label: 'Repeat 5 times', value: 5),
       _RepeatOption(label: 'Repeat 10 times', value: 10),
@@ -1033,4 +1039,67 @@ class _RepeatOption {
   final String label;
   final int value;
   const _RepeatOption({required this.label, required this.value});
+}
+
+/// A bigger, more visible app-bar action button. [filled] makes it a solid
+/// gold circle (used for the primary "Listen to whole Surah" action).
+class _AppBarActionButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool filled;
+
+  const _AppBarActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: filled
+                  ? AppColors.metallicGold
+                  : AppColors.metallicGold.withValues(alpha: 0.12),
+              border: filled
+                  ? null
+                  : Border.all(
+                      color: AppColors.metallicGold.withValues(alpha: 0.5),
+                      width: 1,
+                    ),
+              boxShadow: filled
+                  ? [
+                      BoxShadow(
+                        color: AppColors.metallicGold.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              icon,
+              color: filled ? AppColors.heroBlack : AppColors.metallicGold,
+              size: 24,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
