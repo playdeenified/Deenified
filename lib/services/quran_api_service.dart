@@ -6,6 +6,7 @@ class QuranVerse {
   final int verseNumber;
   final String verseKey;
   final String textUthmani;
+  final String? textUthmaniTajweed;
   final String? translationText;
   final List<QuranWord> words;
 
@@ -13,6 +14,7 @@ class QuranVerse {
     required this.verseNumber,
     required this.verseKey,
     required this.textUthmani,
+    this.textUthmaniTajweed,
     this.translationText,
     required this.words,
   });
@@ -34,6 +36,7 @@ class QuranVerse {
       verseNumber: json['verse_number'] ?? 0,
       verseKey: json['verse_key'] ?? '',
       textUthmani: json['text_uthmani'] ?? '',
+      textUthmaniTajweed: json['text_uthmani_tajweed'] as String?,
       translationText: translation,
       words: wordsList,
     );
@@ -43,18 +46,33 @@ class QuranVerse {
 /// Model for a single word within a verse
 class QuranWord {
   final int position;
+  final String? arabicText;
+  final String? arabicTajweed;
+  final String? audioUrl;
   final String? translationText;
   final String? transliterationText;
 
   QuranWord({
     required this.position,
+    this.arabicText,
+    this.arabicTajweed,
+    this.audioUrl,
     this.translationText,
     this.transliterationText,
   });
 
   factory QuranWord.fromJson(Map<String, dynamic> json) {
+    final raw = (json['audio_url'] as String? ?? '').trim();
+    final audio = raw.isEmpty
+        ? null
+        : (raw.startsWith('http')
+            ? raw
+            : 'https://audio.qurancdn.com/$raw');
     return QuranWord(
       position: json['position'] ?? 0,
+      arabicText: json['text_uthmani'] as String?,
+      arabicTajweed: json['text_uthmani_tajweed'] as String?,
+      audioUrl: audio,
       translationText: json['translation']?['text'],
       transliterationText: json['transliteration']?['text'],
     );
@@ -137,7 +155,8 @@ class QuranApiService {
       '?language=en'
       '&words=true'
       '&translations=$_translationId'
-      '&fields=text_uthmani'
+      '&fields=text_uthmani,text_uthmani_tajweed'
+      '&word_fields=text_uthmani,text_uthmani_tajweed,audio_url'
       '&per_page=286', // Max verses in a surah (Al-Baqarah = 286)
     );
 
