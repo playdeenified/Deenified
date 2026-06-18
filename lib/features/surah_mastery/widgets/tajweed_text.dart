@@ -2,56 +2,49 @@ import 'package:flutter/material.dart';
 
 /// Standard color-coded Tajweed palette, matching the printed Tajweed
 /// editions (Dar Al-Marifah etc.) and Quran.com's reader.
-///
-/// Letters annotated with these rule classes get colored to highlight the
-/// rule of recitation that applies. The full per-rule palette is below; the
-/// resolver maps Quran.com's tag aliases onto these colors.
 class TajweedColors {
   TajweedColors._();
 
   // Nasalization
-  static const ghunnah = Color(0xFFFF7E1B); // ن مّ shadda — orange/red
+  static const ghunnah = Color(0xFFFF7E1B);
 
   // Ikhfaa family (concealment)
-  static const ikhfaa = Color(0xFF4A90E2); // noon saakin / tanween — light blue
-  static const ikhfaaMeem = Color(0xFFE91E8E); // meem saakin before ب — pink
+  static const ikhfaa = Color(0xFF4A90E2);
+  static const ikhfaaMeem = Color(0xFFE91E8E);
 
   // Idghaam family (merging)
-  static const idghamWithGhunnah = Color(0xFF4CAF50); // before ي ن م و
-  static const idghamWithoutGhunnah = Color(0xFF2E7D32); // before ل ر
-  static const idghamMeem = Color(0xFF81C784); // meem before meem
+  static const idghamWithGhunnah = Color(0xFF4CAF50);
+  static const idghamWithoutGhunnah = Color(0xFF2E7D32);
+  static const idghamMeem = Color(0xFF81C784);
 
-  // Iqlab (conversion to meem)
-  static const iqlab = Color(0xFF9C27B0); // before ب
+  // Iqlab
+  static const iqlab = Color(0xFF9C27B0);
 
-  // Qalqalah (echoing letters: ق ط ب ج د when saakin)
-  static const qalqalah = Color(0xFF1565C0); // dark blue
+  // Qalqalah
+  static const qalqalah = Color(0xFF1565C0);
 
-  // Madd (prolongation) — four-tier red palette, deeper = longer hold
-  static const maddTabeei = Color(0xFFC62828); // 2 counts (natural)
-  static const maddMunfasil = Color(0xFFE64A19); // 2–4 (permissible)
-  static const maddMuttasil = Color(0xFFB71C1C); // 4–5 (obligatory)
-  static const maddLazim = Color(0xFFD32F2F); // 6 (necessary)
+  // Madd palette
+  static const maddTabeei = Color(0xFFC62828);
+  static const maddMunfasil = Color(0xFFE64A19);
+  static const maddMuttasil = Color(0xFFB71C1C);
+  static const maddLazim = Color(0xFFD32F2F);
 
   // Heavy / light letter rules
-  static const tafkheem = Color(0xFF6D4C41); // heavy letters — brown
-  static const heavyRa = Color(0xFF1A237E); // Ra mufakhama — deep indigo
+  static const tafkheem = Color(0xFF6D4C41);
+  static const heavyRa = Color(0xFF1A237E);
 
-  // Silent letters (Hamzat al-Wasl, Laam Shamsiyah, marked-silent)
-  static const silent = Color(0xFF9E9E9E); // grey
+  // Silent letters
+  static const silent = Color(0xFF9E9E9E);
 
-  /// Resolve a `class=` value to a color, accepting every alias Quran.com
-  /// uses for the same underlying rule. Returns null when the class is
-  /// unknown — the caller falls back to the base text color.
+  /// Resolve a `class=` value (e.g. from Quran.com markup) to a color.
+  /// Returns null for unrecognised classes; the caller falls back to base.
   static Color? forClass(String raw) {
     final cls = raw.toLowerCase().trim();
     switch (cls) {
-      // Ghunnah
       case 'ghunnah':
       case 'ghunna':
         return ghunnah;
 
-      // Ikhfaa
       case 'ikhafa':
       case 'ikhfa':
         return ikhfaa;
@@ -59,12 +52,9 @@ class TajweedColors {
       case 'ikhfa_shafawi':
         return ikhfaaMeem;
 
-      // Idghaam
       case 'idgham_w_ghunnah':
       case 'idgham_chunnah':
       case 'idgham_ghunnah':
-      // Quran.com actually returns the Y-form (…sayn / …bayn), not the
-      // AI-form. Keep both spellings for safety.
       case 'idgham_mutajanisayn':
       case 'idgham_mutajanisain':
       case 'idgham_mutaqaribayn':
@@ -77,17 +67,14 @@ class TajweedColors {
       case 'idgham_shafawi':
         return idghamMeem;
 
-      // Iqlab
       case 'iqlab':
         return iqlab;
 
-      // Qalqalah
       case 'qalqala':
       case 'qalqalah':
       case 'qalaqah':
         return qalqalah;
 
-      // Madd family — match Quran.com's four tiers
       case 'madda_normal':
       case 'madd_2':
         return maddTabeei;
@@ -104,7 +91,6 @@ class TajweedColors {
       case 'madd_246_6':
         return maddLazim;
 
-      // Heavy / Ra
       case 'tafkheem':
       case 'heavy':
         return tafkheem;
@@ -112,7 +98,6 @@ class TajweedColors {
       case 'heavy_ra':
         return heavyRa;
 
-      // Silent
       case 'ham_wasl':
       case 'hamzat_wasl':
       case 'laam_shamsiyah':
@@ -126,58 +111,84 @@ class TajweedColors {
   }
 }
 
-/// Renders Quran.com's tajweed markup as colored [InlineSpan]s. Handles
-/// both tag conventions Quran.com uses (`<tajweed class=foo>` at the verse
-/// level, `<rule class=foo>` at the word level) plus the verse-end glyph
-/// `<span class=end>١</span>` (stripped — we render the verse number
-/// badge separately).
+/// One Arabic character with optional tag context and an assigned color.
+/// The pipeline mutates [color] across multiple passes (tag colors,
+/// Allah-lam rule, Ra rule, heavy letters, sun-letter fallback, then
+/// diacritic propagation).
+class _TToken {
+  final String char;
+  final String? tagClass;
+  Color? color;
+  _TToken(this.char, this.tagClass);
+}
+
+/// Full Tajweed coloring engine. Applies Quran.com's tag-driven rules
+/// *and* character-class rules so every letter gets the right color
+/// even when upstream doesn't tag it.
 ///
-/// When [enabled] is false, the markup is run through an aggressive tag
-/// stripper so the user never sees raw HTML-ish text even if upstream
-/// somehow returned the marked-up field by mistake.
+/// Pass order is important: tag colors first (most specific), then the
+/// context-sensitive Allah-lam and Ra rules, then the always-on rules
+/// (heavy letters, sun-letter lam fallback), then diacritic propagation.
 class TajweedTextSpan {
   TajweedTextSpan._();
 
-  /// Combined pattern: `<tag class=foo>inner</tag>` for either tag name,
-  /// with bare, single-, or double-quoted class values.
-  static final RegExp _rulePattern = RegExp(
-    '<(tajweed|rule)\\s+class\\s*=\\s*["\']?([^"\'>\\s]+)["\']?\\s*>'
-    '([^<]*)'
-    '</\\1\\s*>',
-    caseSensitive: false,
-  );
+  // -------------------------------------------------------------------------
+  // Character-class sets
+  // -------------------------------------------------------------------------
 
-  /// Final-pass stripper. Matches any `<...>` so leftover tags (including
-  /// unrecognized ones or malformed nesting) never reach the user.
-  static final RegExp _anyTagPattern = RegExp(r'<[^>]+>');
+  /// Qalqalah letters: قطب جد. Only these five can carry the qalqalah color.
+  static const _qalqalahLetters = {'ق', 'ط', 'ب', 'ج', 'د'};
 
-  /// Verse-end glyph (e.g. `<span class=end>١</span>`).
+  /// Letters of isti'laa (always-heavy / tafkheem): خ ص ض غ ط ق ظ.
+  /// Mnemonic: خص ضغط قظ. Brown wherever they appear.
+  static const _heavyLetters = {'خ', 'ص', 'ض', 'غ', 'ط', 'ق', 'ظ'};
+
+  /// Sun letters (14): the ل of الـ before any of these is silent.
+  static const _sunLetters = {
+    'ت', 'ث', 'د', 'ذ', 'ر', 'ز', 'س', 'ش',
+    'ص', 'ض', 'ط', 'ظ', 'ل', 'ن',
+  };
+
+  // -------------------------------------------------------------------------
+  // Unicode constants — Arabic harakah and special marks
+  // -------------------------------------------------------------------------
+  static const _fatha = 'َ';
+  static const _damma = 'ُ';
+  static const _kasra = 'ِ';
+  static const _tanweenFath = 'ً';
+  static const _tanweenDamm = 'ٌ';
+  static const _tanweenKasr = 'ٍ';
+  static const _sukun = 'ْ';
+  static const _shadda = 'ّ';
+  static const _alefWasla = 'ٱ'; // ٱ
+  static const _alef = 'ا'; // ا
+
+  // -------------------------------------------------------------------------
+  // Patterns for the input markup
+  // -------------------------------------------------------------------------
+
   static final RegExp _verseEndPattern = RegExp(
     r'<span\s+class\s*=\s*"?end"?\s*>[^<]*</span\s*>',
     caseSensitive: false,
   );
 
-  /// The five Qalqalah letters (mnemonic: قطب جد). Used as a defensive
-  /// guard: even if upstream ever mis-tags a non-qalqalah letter with the
-  /// qalqalah class, we refuse to color it.
-  static const _qalqalahLetters = {'ق', 'ط', 'ب', 'ج', 'د'};
-  static final RegExp _arabicLetterPattern = RegExp(r'[ء-ي]');
+  static final RegExp _anyTagPattern = RegExp(r'<[^>]+>');
 
-  /// Returns false if [cls] is a qalqalah class but the inner [text]
-  /// contains any base Arabic letter that isn't one of قطبجد. Other rules
-  /// pass through unchanged.
-  static bool _passesRuleGuard(String cls, String text) {
-    final lower = cls.toLowerCase();
-    final isQalqalah =
-        lower == 'qalqalah' || lower == 'qalaqah' || lower == 'qalqala';
-    if (!isQalqalah) return true;
-    final letters = _arabicLetterPattern.allMatches(text).map((m) => m.group(0));
-    for (final l in letters) {
-      if (l == null) continue;
-      if (!_qalqalahLetters.contains(l)) return false;
-    }
-    return true;
-  }
+  /// Opening tag: `<tajweed class=foo>` or `<rule class=foo>`. Class value
+  /// can be bare, single-, or double-quoted.
+  static final RegExp _openTagPattern = RegExp(
+    '<(tajweed|rule)\\s+class\\s*=\\s*["\']?([^"\'>\\s]+)["\']?\\s*>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _closeTagPattern = RegExp(
+    '</(tajweed|rule)\\s*>',
+    caseSensitive: false,
+  );
+
+  // -------------------------------------------------------------------------
+  // Public entry point
+  // -------------------------------------------------------------------------
 
   static List<InlineSpan> build(
     String markup, {
@@ -188,40 +199,296 @@ class TajweedTextSpan {
       return [TextSpan(text: _stripAllTags(markup), style: baseStyle)];
     }
 
-    // Drop verse-end glyphs up front so they don't show up colored.
     final cleaned = markup.replaceAll(_verseEndPattern, '');
+    final tokens = _tokenize(cleaned);
 
-    final spans = <InlineSpan>[];
-    int cursor = 0;
-    for (final match in _rulePattern.allMatches(cleaned)) {
-      if (match.start > cursor) {
-        spans.add(TextSpan(
-          text: _stripAllTags(cleaned.substring(cursor, match.start)),
-          style: baseStyle,
-        ));
+    _applyTagColors(tokens);
+    _applyAllahLamRule(tokens);
+    _applyRaRule(tokens);
+    _applyHeavyLetters(tokens);
+    _applySunLetterFallback(tokens);
+    _propagateDiacritics(tokens);
+
+    return _buildSpans(tokens, baseStyle);
+  }
+
+  // -------------------------------------------------------------------------
+  // Tokenization
+  // -------------------------------------------------------------------------
+
+  /// Walk the input character-by-character, tracking whether we're currently
+  /// inside a tajweed/rule tag. Each character becomes a [_TToken] with the
+  /// active tag class (if any) attached.
+  static List<_TToken> _tokenize(String text) {
+    final tokens = <_TToken>[];
+    String? currentClass;
+    int i = 0;
+    while (i < text.length) {
+      if (text[i] == '<') {
+        final end = text.indexOf('>', i);
+        if (end == -1) {
+          // Malformed — bail and consume the char as data.
+          tokens.add(_TToken(text[i], currentClass));
+          i++;
+          continue;
+        }
+        final tag = text.substring(i, end + 1);
+        final openMatch = _openTagPattern.firstMatch(tag);
+        final closeMatch = _closeTagPattern.firstMatch(tag);
+        if (openMatch != null) {
+          currentClass = openMatch.group(2)?.toLowerCase();
+        } else if (closeMatch != null) {
+          currentClass = null;
+        }
+        // Any other `<...>` is silently dropped.
+        i = end + 1;
+        continue;
       }
-      final cls = match.group(2) ?? '';
-      final inner = match.group(3) ?? '';
-      final color = TajweedColors.forClass(cls);
-      final coloredOk = color != null && _passesRuleGuard(cls, inner);
-      spans.add(TextSpan(
-        text: inner,
-        style: coloredOk ? baseStyle.copyWith(color: color) : baseStyle,
-      ));
-      cursor = match.end;
+      tokens.add(_TToken(text[i], currentClass));
+      i++;
     }
-    if (cursor < cleaned.length) {
+    return tokens;
+  }
+
+  // -------------------------------------------------------------------------
+  // Pass 1: tag colors (with the Qalqalah letter guard)
+  // -------------------------------------------------------------------------
+
+  static void _applyTagColors(List<_TToken> tokens) {
+    for (final t in tokens) {
+      final cls = t.tagClass;
+      if (cls == null) continue;
+      final color = TajweedColors.forClass(cls);
+      if (color == null) continue;
+      // Defensive: refuse to paint Qalqalah on a non-قطبجد base letter.
+      if (_isQalqalahClass(cls) &&
+          _isBaseLetter(t.char) &&
+          !_qalqalahLetters.contains(t.char)) {
+        continue;
+      }
+      t.color = color;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Pass 2: the lam in الله
+  //
+  // Pattern in the text: [ا|ٱ] ل ل (shadda) — the second lam carries shadda.
+  // The first lam is silent (gray). The second lam is heavy (dark blue) when
+  // the preceding word ends in fatha/damma/tanween-fath/tanween-damm, and
+  // light (base color) when it ends in kasra/tanween-kasr.
+  // -------------------------------------------------------------------------
+
+  static void _applyAllahLamRule(List<_TToken> tokens) {
+    for (int i = 2; i < tokens.length - 1; i++) {
+      final alef = tokens[i - 2].char;
+      if (alef != _alef && alef != _alefWasla) continue;
+      if (tokens[i - 1].char != 'ل') continue;
+      if (tokens[i].char != 'ل') continue;
+      if (tokens[i + 1].char != _shadda) continue;
+
+      // First lam — silent (gray) unless tag already painted it.
+      tokens[i - 1].color ??= TajweedColors.silent;
+
+      // Shadda lam — colored by preceding word's last harakah.
+      // Default to heavy unless the preceding harakah is explicitly kasra
+      // or tanween-kasr (the only contexts in which Allah-lam goes light).
+      final preceding = _findPrecedingHarakah(tokens, i - 2);
+      final isLight = preceding == _kasra || preceding == _tanweenKasr;
+      if (!isLight && tokens[i].color == null) {
+        tokens[i].color = TajweedColors.heavyRa;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Pass 3: Ra rules
+  //
+  // Heavy (mufakhama) when the ra carries fatha or damma (or tanween of
+  // either), OR when it's saakin and the preceding harakah is fatha/damma.
+  // Light (muraqqaqa) when the ra carries kasra (or tanween-kasr), OR when
+  // it's saakin and the preceding harakah is kasra. Default: heavy.
+  // -------------------------------------------------------------------------
+
+  static void _applyRaRule(List<_TToken> tokens) {
+    for (int i = 0; i < tokens.length; i++) {
+      if (tokens[i].char != 'ر') continue;
+      if (tokens[i].color != null) continue; // tag wins
+
+      final harakah = _harakahAfter(tokens, i);
+      if (harakah == _fatha ||
+          harakah == _damma ||
+          harakah == _tanweenFath ||
+          harakah == _tanweenDamm) {
+        tokens[i].color = TajweedColors.heavyRa;
+      } else if (harakah == _kasra || harakah == _tanweenKasr) {
+        // Light — leave default base color.
+      } else if (harakah == _sukun) {
+        final prev = _findPrecedingHarakah(tokens, i);
+        if (prev == _kasra || prev == _tanweenKasr) {
+          // Light — leave default.
+        } else {
+          tokens[i].color = TajweedColors.heavyRa;
+        }
+      }
+      // No clear harakah → leave default (don't guess).
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Pass 4: heavy letters (always tafkheem)
+  // -------------------------------------------------------------------------
+
+  static void _applyHeavyLetters(List<_TToken> tokens) {
+    for (final t in tokens) {
+      if (t.color != null) continue;
+      if (_heavyLetters.contains(t.char)) {
+        t.color = TajweedColors.tafkheem;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Pass 5: sun-letter lam fallback
+  //
+  // Quran.com tags laam_shamsiyah comprehensively, but in case an instance
+  // slips through, paint the lam of الـ + sun-letter silent ourselves.
+  // -------------------------------------------------------------------------
+
+  static void _applySunLetterFallback(List<_TToken> tokens) {
+    for (int i = 1; i < tokens.length - 1; i++) {
+      final alef = tokens[i - 1].char;
+      if (alef != _alef && alef != _alefWasla) continue;
+      if (tokens[i].char != 'ل') continue;
+      if (tokens[i].color != null) continue;
+      // Find the next base letter, skipping diacritics.
+      String? nextLetter;
+      for (int j = i + 1; j < tokens.length; j++) {
+        final c = tokens[j].char;
+        if (_isDiacritic(c)) continue;
+        if (_isBaseLetter(c)) {
+          nextLetter = c;
+          break;
+        }
+        break;
+      }
+      if (nextLetter != null && _sunLetters.contains(nextLetter)) {
+        tokens[i].color = TajweedColors.silent;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Pass 6: propagate base-letter color to attached diacritics
+  //
+  // In Arabic, diacritics (harakah, shadda, dagger alef) sit on top of the
+  // preceding base letter. So a colored letter must drag its diacritics
+  // with it visually — otherwise we get a brown letter with a black fatha
+  // mark on top, which looks wrong.
+  // -------------------------------------------------------------------------
+
+  static void _propagateDiacritics(List<_TToken> tokens) {
+    Color? lastBaseColor;
+    for (final t in tokens) {
+      if (_isBaseLetter(t.char)) {
+        lastBaseColor = t.color;
+      } else if (_isDiacritic(t.char) && t.color == null) {
+        t.color = lastBaseColor;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Span assembly — group contiguous same-color tokens into one TextSpan
+  // -------------------------------------------------------------------------
+
+  static List<InlineSpan> _buildSpans(
+    List<_TToken> tokens,
+    TextStyle baseStyle,
+  ) {
+    if (tokens.isEmpty) return const [];
+    final spans = <InlineSpan>[];
+    final buf = StringBuffer();
+    Color? currentColor = tokens.first.color;
+    for (final t in tokens) {
+      if (t.color != currentColor) {
+        if (buf.isNotEmpty) {
+          spans.add(TextSpan(
+            text: buf.toString(),
+            style: currentColor != null
+                ? baseStyle.copyWith(color: currentColor)
+                : baseStyle,
+          ));
+          buf.clear();
+        }
+        currentColor = t.color;
+      }
+      buf.write(t.char);
+    }
+    if (buf.isNotEmpty) {
       spans.add(TextSpan(
-        text: _stripAllTags(cleaned.substring(cursor)),
-        style: baseStyle,
+        text: buf.toString(),
+        style: currentColor != null
+            ? baseStyle.copyWith(color: currentColor)
+            : baseStyle,
       ));
     }
     return spans;
   }
 
-  /// Belt-and-suspenders strip — kills any `<...>` patterns that may have
-  /// slipped past the structured matcher (malformed nesting, unknown
-  /// tag names, mojibake from a CDN, etc).
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
+
+  /// Returns the harakah character sitting on the letter at [letterIdx],
+  /// skipping a leading shadda if present. Returns null if there isn't one.
+  static String? _harakahAfter(List<_TToken> tokens, int letterIdx) {
+    int j = letterIdx + 1;
+    if (j >= tokens.length) return null;
+    if (tokens[j].char == _shadda) j++;
+    if (j >= tokens.length) return null;
+    final c = tokens[j].char;
+    return _isHarakah(c) ? c : null;
+  }
+
+  /// Walk back from [idx] looking for the harakah on the previous base
+  /// letter (across whitespace). Returns null if the previous letter has
+  /// no harakah, or if we run off the start.
+  static String? _findPrecedingHarakah(List<_TToken> tokens, int idx) {
+    for (int j = idx - 1; j >= 0; j--) {
+      final c = tokens[j].char;
+      if (c == ' ' || c == '\n' || c == '\t' || c == ' ') continue;
+      if (_isHarakah(c)) return c;
+      if (_isBaseLetter(c)) return null;
+    }
+    return null;
+  }
+
+  static bool _isBaseLetter(String c) {
+    if (c.isEmpty) return false;
+    final code = c.codeUnitAt(0);
+    // 0x0621–0x064A is the main Arabic letter block; 0x0671 is alef wasla.
+    return (code >= 0x0621 && code <= 0x064A) || code == 0x0671;
+  }
+
+  static bool _isDiacritic(String c) {
+    if (c.isEmpty) return false;
+    final code = c.codeUnitAt(0);
+    // Harakah (0x064B–0x0652) + dagger alef (0x0670) sit on top of letters.
+    return (code >= 0x064B && code <= 0x0652) || code == 0x0670;
+  }
+
+  static bool _isHarakah(String c) {
+    if (c.isEmpty) return false;
+    final code = c.codeUnitAt(0);
+    return code >= 0x064B && code <= 0x0652;
+  }
+
+  static bool _isQalqalahClass(String cls) {
+    final lower = cls.toLowerCase();
+    return lower == 'qalqalah' || lower == 'qalaqah' || lower == 'qalqala';
+  }
+
   static String _stripAllTags(String s) {
     return s.replaceAll(_anyTagPattern, '');
   }
