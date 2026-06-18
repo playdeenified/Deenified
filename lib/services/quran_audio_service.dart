@@ -140,26 +140,6 @@ class QuranAudioService {
     await repeatVerse(surahId, verseIndex, 1);
   }
 
-  /// Play a single word's audio (one-shot, no loop). Used for tap-to-play
-  /// on individual Arabic words. [label] is shown in the lock-screen
-  /// notification.
-  Future<void> playWordUrl(String audioUrl, {String label = 'Word'}) async {
-    await _cancelExtras();
-    final source = AudioSource.uri(
-      Uri.parse(audioUrl),
-      tag: MediaItem(
-        id: audioUrl,
-        album: _currentSurahName,
-        title: label,
-        artist: _currentReciterName,
-      ),
-    );
-    await player.setAudioSource(source);
-    _queueLoaded = false;
-    await player.setLoopMode(LoopMode.off);
-    await player.play();
-  }
-
   /// Repeat a single verse [times] times. Pass -1 for infinite repeat.
   Future<void> repeatVerse(int surahId, int verseIndex, int times) async {
     await _cancelExtras();

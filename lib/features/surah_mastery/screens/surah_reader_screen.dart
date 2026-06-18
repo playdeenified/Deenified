@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -32,10 +31,6 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   final Set<int> _expandedVerses = {};
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _verseKeys = {};
-
-  // Tap recognizers for per-word taps in the Arabic text. Built lazily,
-  // disposed once on screen teardown.
-  final Map<String, TapGestureRecognizer> _wordRecognizers = {};
 
   // Per-verse repeat cycle state. Only one verse is "active" at a time —
   // tapping the repeat-cycle icon advances through:
@@ -84,9 +79,6 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     // silence the recitation. The user stops it from the playback bar or
     // the lock-screen controls.
     SurahSettingsService.instance.removeListener(_onSettingsChanged);
-    for (final r in _wordRecognizers.values) {
-      r.dispose();
-    }
     _scrollController.dispose();
     super.dispose();
   }
@@ -198,33 +190,6 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   Future<void> _onSettingsTap() async {
     HapticFeedback.lightImpact();
     await showSurahSettingsSheet(context);
-  }
-
-  Future<void> _onWordTap(QuranWord word) async {
-    final url = word.audioUrl;
-    if (url == null) return;
-    HapticFeedback.selectionClick();
-    try {
-      // Tapping a word interrupts any verse repeat — reflect that in UI.
-      setState(() {
-        _activeRepeatVerseIndex = null;
-        _activeRepeatCount = 0;
-      });
-      await QuranAudioService.instance.playWordUrl(
-        url,
-        label: word.transliterationText ?? 'Word',
-      );
-    } catch (_) {
-      _showAudioError();
-    }
-  }
-
-  TapGestureRecognizer _recognizerFor(QuranVerse verse, QuranWord word) {
-    final key = '${verse.verseKey}_${word.position}';
-    return _wordRecognizers.putIfAbsent(
-      key,
-      () => TapGestureRecognizer()..onTap = () => _onWordTap(word),
-    );
   }
 
   void _showAudioError() {
@@ -675,7 +640,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
               ),
             ),
 
-            // Arabic text — per-word tappable spans, optional tajweed coloring
+            // Arabic text — optional tajweed coloring, no interactions
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
@@ -687,7 +652,6 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 verse: verse,
                 fontSize: fontSize,
                 tajweedOn: tajweedOn,
-                recognizerFor: _recognizerFor,
               ),
             ),
 
@@ -770,48 +734,44 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                   spacing: AppSpacing.sm,
                   runSpacing: AppSpacing.sm,
                   children: verse.words.map((word) {
-                    return InkWell(
-                      onTap: () => _onWordTap(word),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.xs,
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.richBlack,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(
+                          color: AppColors.glassBorder,
+                          width: 0.5,
                         ),
-                        decoration: BoxDecoration(
-                          color: AppColors.richBlack,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: Border.all(
-                            color: AppColors.glassBorder,
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (word.transliterationText != null)
-                              Text(
-                                word.transliterationText!,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (word.transliterationText != null)
+                            Text(
+                              word.transliterationText!,
+                              style: const TextStyle(
+                                color: AppColors.softGold,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          if (word.translationText != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                word.translationText!,
                                 style: const TextStyle(
-                                  color: AppColors.softGold,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textTertiary,
+                                  fontSize: 10,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
-                            if (word.translationText != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  word.translationText!,
-                                  style: const TextStyle(
-                                    color: AppColors.textTertiary,
-                                    fontSize: 10,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
                     );
                   }).toList(),
@@ -829,20 +789,16 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   }
 }
 
-/// Renders a verse's Arabic text as per-word tappable RichText, with
-/// optional Tajweed coloring. Falls back to plain [QuranVerse.textUthmani]
-/// if word-level data isn't available.
+/// Renders a verse's Arabic text with optional Tajweed coloring. Non-interactive.
 class _ArabicVerseText extends StatelessWidget {
   final QuranVerse verse;
   final double fontSize;
   final bool tajweedOn;
-  final TapGestureRecognizer Function(QuranVerse, QuranWord) recognizerFor;
 
   const _ArabicVerseText({
     required this.verse,
     required this.fontSize,
     required this.tajweedOn,
-    required this.recognizerFor,
   });
 
   @override
@@ -852,52 +808,20 @@ class _ArabicVerseText extends StatelessWidget {
       fontSize: fontSize,
     );
 
-    final words = verse.words;
-    if (words.isEmpty) {
-      // No word-level data — render the verse as one chunk.
-      final markup = tajweedOn
-          ? (verse.textUthmaniTajweed ?? verse.textUthmani)
-          : verse.textUthmani;
-      return Text.rich(
-        TextSpan(
-          children: TajweedTextSpan.build(
-            markup,
-            baseStyle: baseStyle,
-            enabled: tajweedOn,
-          ),
-        ),
-        textAlign: TextAlign.right,
-        textDirection: TextDirection.rtl,
-      );
-    }
-
-    final spans = <InlineSpan>[];
-    for (var i = 0; i < words.length; i++) {
-      final w = words[i];
-      final recognizer = recognizerFor(verse, w);
-
-      if (tajweedOn && (w.arabicTajweed ?? '').isNotEmpty) {
-        final children = TajweedTextSpan.build(
-          w.arabicTajweed!,
-          baseStyle: baseStyle,
-          enabled: true,
-        );
-        spans.add(TextSpan(children: children, recognizer: recognizer));
-      } else {
-        spans.add(TextSpan(
-          text: w.arabicText ?? '',
-          style: baseStyle,
-          recognizer: recognizer,
-        ));
-      }
-
-      if (i < words.length - 1) {
-        spans.add(TextSpan(text: ' ', style: baseStyle));
-      }
-    }
+    // Prefer the verse-level tajweed string when present — it's a single
+    // continuous run and shapes more reliably than per-word fragments.
+    final markup = tajweedOn
+        ? (verse.textUthmaniTajweed ?? verse.textUthmani)
+        : verse.textUthmani;
 
     return Text.rich(
-      TextSpan(children: spans),
+      TextSpan(
+        children: TajweedTextSpan.build(
+          markup,
+          baseStyle: baseStyle,
+          enabled: tajweedOn,
+        ),
+      ),
       textAlign: TextAlign.right,
       textDirection: TextDirection.rtl,
     );

@@ -298,33 +298,7 @@ class _SurahSettingsSheetState extends State<_SurahSettingsSheet> {
                 ),
               ),
 
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.touch_app_rounded,
-                      size: 16,
-                      color: AppColors.textTertiary,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        'Tip: tap any Arabic word to hear it spoken.',
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textTertiary,
-                                ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),
