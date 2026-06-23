@@ -1,4 +1,19 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network access for Quran.com API + Supabase + audio CDNs. The debug
+         and profile manifests have their own copy of INTERNET, but RELEASE
+         builds use only this manifest, so it must live here too. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- just_audio_background (audio_service) requirements for background
+         playback + lock-screen controls. Without these the surah recitation
+         silently stops when the screen sleeps or the app backgrounds on
+         Android, and on Android 14+ the service start would throw. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+
     <application
         android:label="deenified"
         android:name="${applicationName}"
@@ -25,6 +40,30 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- audio_service (used by just_audio_background) — handles the
+             foreground notification, lock-screen controls, and survives the
+             activity going away. Required for background Quran playback. -->
+        <service
+            android:name="com.ryanheise.audioservice.AudioService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true"
+            tools:ignore="Instantiatable">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService"/>
+            </intent-filter>
+        </service>
+
+        <!-- Lets Bluetooth/headset media buttons control playback. -->
+        <receiver
+            android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+            android:exported="true"
+            tools:ignore="Instantiatable">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON"/>
+            </intent-filter>
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

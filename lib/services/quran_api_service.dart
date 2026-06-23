@@ -65,9 +65,11 @@ class QuranWord {
     final raw = (json['audio_url'] as String? ?? '').trim();
     final audio = raw.isEmpty
         ? null
-        : (raw.startsWith('http')
+        : raw.startsWith('http')
             ? raw
-            : 'https://audio.qurancdn.com/$raw');
+            : raw.startsWith('//')
+                ? 'https:$raw'
+                : 'https://audio.qurancdn.com/$raw';
     return QuranWord(
       position: json['position'] ?? 0,
       arabicText: json['text_uthmani'] as String?,
@@ -126,7 +128,9 @@ class VerseAudio {
     final raw = (json['url'] as String? ?? '').trim();
     final url = raw.startsWith('http')
         ? raw
-        : 'https://verses.quran.com/$raw';
+        : raw.startsWith('//')
+            ? 'https:$raw'
+            : 'https://verses.quran.com/$raw';
     return VerseAudio(
       verseKey: key,
       verseNumber: verseNum,
@@ -145,7 +149,19 @@ class QuranApiService {
   /// Sahih International translation
   static const _translationId = 131;
 
+  /// Hard timeout on Quran.com requests. Without this, a hung connection
+  /// would block the entire audio queue indefinitely with no error surfaced
+  /// to the UI. Kept tight so users fail fast and see a retry instead of
+  /// staring at a dead button.
+  static const _httpTimeout = Duration(seconds: 10);
+
   List<Reciter>? _recitersCache;
+
+  /// Clear the in-memory reciter cache so the next [getReciters] call hits the
+  /// network. Useful if Quran.com adds reciters during a session.
+  void invalidateRecitersCache() {
+    _recitersCache = null;
+  }
 
   /// Fetch all verses for a given chapter/surah
   /// Returns parsed [QuranVerse] list
@@ -160,7 +176,7 @@ class QuranApiService {
       '&per_page=286', // Max verses in a surah (Al-Baqarah = 286)
     );
 
-    final response = await http.get(url);
+    final response = await http.get(url).timeout(_httpTimeout);
 
     if (response.statusCode != 200) {
       throw Exception('Failed to load Surah $surahId: ${response.statusCode}');
@@ -177,7 +193,7 @@ class QuranApiService {
   Future<List<Reciter>> getReciters() async {
     if (_recitersCache != null) return _recitersCache!;
     final url = Uri.parse('$_baseUrl/resources/recitations?language=en');
-    final response = await http.get(url);
+    final response = await http.get(url).timeout(_httpTimeout);
     if (response.statusCode != 200) {
       throw Exception('Failed to load reciters: ${response.statusCode}');
     }
@@ -189,12 +205,16 @@ class QuranApiService {
     return list;
   }
 
-  /// Fetch per-verse audio URLs for a given reciter + surah
+  /// Fetch per-verse audio URLs for a given reciter + surah.
+  ///
+  /// The Quran.com API paginates at 10 per page by default, so without an
+  /// explicit `per_page` the audio queue silently caps at verse 10 for every
+  /// surah. Al-Baqarah is the longest at 286 verses, so 300 is a safe ceiling.
   Future<List<VerseAudio>> getVerseAudios(int reciterId, int surahId) async {
     final url = Uri.parse(
-      '$_baseUrl/recitations/$reciterId/by_chapter/$surahId',
+      '$_baseUrl/recitations/$reciterId/by_chapter/$surahId?per_page=300',
     );
-    final response = await http.get(url);
+    final response = await http.get(url).timeout(_httpTimeout);
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to load audio for $reciterId/$surahId: ${response.statusCode}',

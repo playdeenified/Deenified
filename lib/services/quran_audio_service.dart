@@ -12,7 +12,25 @@ import 'quran_api_service.dart';
 /// quran.com. Exposes streams the UI can listen to for
 /// "current verse" highlighting and persists the user's reciter choice.
 class QuranAudioService {
-  QuranAudioService._();
+  QuranAudioService._() {
+    // If a single verse fails to load (CDN 404, transient network blip),
+    // just_audio surfaces it through playbackEventStream.onError and the
+    // player stalls. We auto-advance to the next verse so the queue keeps
+    // moving instead of going silent for the rest of the surah.
+    player.playbackEventStream.listen(
+      (_) {},
+      onError: (Object _, StackTrace __) async {
+        final next = player.nextIndex;
+        if (next == null) return;
+        try {
+          await player.seekToNext();
+          await player.play();
+        } catch (_) {
+          // best-effort — if even seekToNext fails, give up silently
+        }
+      },
+    );
+  }
   static final instance = QuranAudioService._();
 
   static const _kReciterKey = 'quran_audio_reciter_id';
@@ -57,6 +75,7 @@ class QuranAudioService {
     _queueLoaded = false;
     _verses = [];
     _loadedForReciterId = -1;
+    _currentSurahId = null;
   }
 
   /// Load the full surah as a concatenated queue (one audio source per ayah).
@@ -99,6 +118,22 @@ class QuranAudioService {
       _currentReciterName = match.reciterName;
     } catch (_) {
       _currentReciterName = 'Reciter';
+    }
+  }
+
+  /// Pre-load the full audio queue for a surah WITHOUT starting playback.
+  ///
+  /// Called from `SurahReaderScreen.initState` so that by the time the user
+  /// taps play, the verse-list fetch + `setAudioSources` round-trip is
+  /// already done and just_audio has begun buffering the first MP3. Result:
+  /// playback starts the moment they tap, instead of after a 1–3 s round-trip
+  /// to api.quran.com. No-op if already loaded for this surah+reciter, and
+  /// silently swallows errors (real errors surface on the actual play call).
+  Future<void> warmUp(int surahId) async {
+    try {
+      await _ensureQueueLoaded(surahId);
+    } catch (_) {
+      // Best-effort prefetch — don't disturb the UI if it fails.
     }
   }
 

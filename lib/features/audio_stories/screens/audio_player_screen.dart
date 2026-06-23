@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../providers/providers.dart';
+import '../../../services/quran_audio_service.dart';
 import '../../../services/supabase_service.dart';
 
 class AudioPlayerScreen extends ConsumerStatefulWidget {
@@ -34,13 +35,22 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   void initState() {
     super.initState();
     _player = AudioPlayer();
+    // Make sure surah recitation isn't still playing in the background
+    // when the user opens a story — otherwise two recitations layer.
+    QuranAudioService.instance.stop();
   }
 
-  bool _loadStarted = false;
+  String? _loadingForPath; // The path we've kicked off a load for, if any.
 
+  /// Idempotent load. Safe to call from build() because we only ever fire
+  /// once per `audioPath` — even if the previous attempt errored. The Retry
+  /// button clears [_loadingForPath] so a subsequent call re-fires.
   Future<void> _loadAudio(String audioPath) async {
-    if (_loadStarted) return; // Fire exactly once
-    _loadStarted = true;
+    if (_loadingForPath == audioPath) return;
+    _loadingForPath = audioPath;
+    if (_audioError != null && mounted) {
+      setState(() => _audioError = null);
+    }
     try {
       final url = Supabase.instance.client.storage
           .from('audio-files')
@@ -72,6 +82,14 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
         });
       }
     }
+  }
+
+  void _retryAudio() {
+    final path = _loadingForPath;
+    if (path == null) return;
+    // Force re-attempt by treating the next call as fresh.
+    _loadingForPath = null;
+    _loadAudio(path);
   }
 
   String? _getCoverUrl(Map<String, dynamic> story) {
@@ -255,11 +273,30 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
 
                   // Audio Controls (stream-based)
                   if (_audioError != null)
-                    Text(
-                      'Audio unavailable',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.error,
+                    Column(
+                      children: [
+                        Text(
+                          'Audio unavailable',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.error,
+                              ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        OutlinedButton.icon(
+                          onPressed: _retryAudio,
+                          icon: const Icon(
+                            Icons.refresh,
+                            color: AppColors.metallicGold,
                           ),
+                          label: const Text(
+                            'Retry',
+                            style: TextStyle(color: AppColors.metallicGold),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.metallicGold),
+                          ),
+                        ),
+                      ],
                     )
                   else ...[
                     // Progress Bar

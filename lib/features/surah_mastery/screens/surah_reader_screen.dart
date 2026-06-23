@@ -47,6 +47,9 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     super.initState();
     _versesFuture = QuranApiService.instance.getVersesByChapter(widget.surahId);
     QuranAudioService.instance.setSurahDisplayName(widget.surahName);
+    // Kick off the audio queue prefetch in parallel with the text load so
+    // tapping play is instant instead of triggering the network round-trip.
+    QuranAudioService.instance.warmUp(widget.surahId);
     _refreshSelectedReciterName();
     SurahSettingsService.instance
         .ensureLoaded()
@@ -87,6 +90,8 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     final pickedId = await showReciterPickerSheet(context);
     if (pickedId != null) {
       await _refreshSelectedReciterName();
+      // Prefetch with the new reciter so the next play tap is instant.
+      QuranAudioService.instance.warmUp(widget.surahId);
     }
   }
 
